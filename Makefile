@@ -1,15 +1,22 @@
-# $Id: Makefile 181 1999-12-21 12:54:22Z schani $
+# $Id: Makefile 182 1999-12-21 16:55:25Z schani $
 
-CC=gcc
-CFLAGS=-Wall -g -I.
+VERSION = 0.1
 
-all : docexample
+all :
 
-docexample : docexample.o lispreader.o
-	$(CC) -Wall -g -o docexample lispreader.o docexample.o
-
-%.o : %.c
-	$(CC) $(CFLAGS) -c $<
+dist :
+	rm -rf lispreader-$(VERSION)
+	mkdir lispreader-$(VERSION)
+	mkdir lispreader-$(VERSION)/doc
+	cp README COPYING lispreader-$(VERSION)/
+	cp -pr lispreader.[ch] docexample.c lispreader-$(VERSION)/
+	cp Makefile.dist lispreader-$(VERSION)/Makefile
+	cp doc/{lispreader,version}.texi lispreader-$(VERSION)/doc/
+	cp doc/Makefile lispreader-$(VERSION)/doc/
+	make -C lispreader-$(VERSION)/doc/
+	tar -zcvf lispreader-$(VERSION).tar.gz lispreader-$(VERSION)
+	rm -rf lispreader-$(VERSION)
 
 clean :
-	rm -f docexample *.o *~
+	rm -f *~
+	make -C doc clean

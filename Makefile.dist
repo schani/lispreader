@@ -1,0 +1,15 @@
+# $Id: Makefile.dist 182 1999-12-21 16:55:25Z schani $
+
+CC=gcc
+CFLAGS=-Wall -g -I.
+
+all : docexample
+
+docexample : docexample.o lispreader.o
+	$(CC) -Wall -g -o docexample lispreader.o docexample.o
+
+%.o : %.c
+	$(CC) $(CFLAGS) -c $<
+
+clean :
+	rm -f docexample *.o *~

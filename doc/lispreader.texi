@@ -40,13 +40,15 @@ this manual provided the copyright notice and this permission notice
 are preserved on all copies.
 @end titlepage
 
-@node Introduction, Syntax
+@node Introduction, Using lispreader, (dir), (dir)
 @comment  node-name,  next,  previous,  up
 @chapter Introduction
 
 @menu
 * What lispreader is::          
 * What lispreader is not::      
+* Licence::                     
+* Obtaining lispreader::        
 @end menu
 
 @node What lispreader is, What lispreader is not, Introduction, Introduction
@@ -60,7 +62,7 @@ a framework for reading configuration files. To simplify interpretation
 of the read data, @code{lispreader} also provides functions for simple
 matching of expressions against patterns.
 
-@node What lispreader is not,  , What lispreader is, Introduction
+@node What lispreader is not, Licence, What lispreader is, Introduction
 @comment  node-name,  next,  previous,  up
 @section What is @code{lispreader} not?
 
@@ -71,7 +73,7 @@ does thus not compete directly with those. If all you need is a simple
 way to read Lisp expressions without interpreting them with Lisp
 semantics, you will probably be satisfied with @code{lispreader}.
 
-@node Licence
+@node Licence, Obtaining lispreader, What lispreader is not, Introduction
 @comment  node-name,  next,  previous,  up
 @section Licence and Warranty
 
@@ -89,23 +91,23 @@ You should have received a copy of the GNU General Public License
 along with @code{chpp}; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
-@node Obtaining lispreader
+@node Obtaining lispreader,  , Licence, Introduction
 @comment  node-name,  next,  previous,  up
 @section Obtaining @code{lispreader}
 
 @code{lispreader} is available for free download on the world-wide-web
 at the URL @url{http://www.complang.tuwien.ac.at/~schani/lispreader/}.
 
-@node Using lispreader
+@node Using lispreader, Syntax, Introduction, (dir)
 @comment  node-name,  next,  previous,  up
-@chapter Using @code{lispreader} in you programs
+@chapter Using @code{lispreader} in your programs
 
 Since @code{lispreader} only consists of the files @file{lispreader.c}
 and @file{lispreader.h}, which are ANSI-C, it is very easy to
 incorporate it in your own programs: just add these two files to your
 own program's files.
 
-@node Syntax, Reference, Introduction
+@node Syntax, Reference, Using lispreader, (dir)
 @comment  node-name,  next,  previous,  up
 @chapter Syntax
 
@@ -231,7 +233,7 @@ matches the list @code{(a #t 43)} as well as the list @code{(b 1)}, but
 not the list @code{(b #f)}. As another example, @code{#?(boolean)} is
 equivalent to @code{#?(or #t #f)}.
 
-@node Reference, Example, Syntax
+@node Reference, Example, Syntax, (dir)
 @comment  node-name,  next,  previous,  up
 @chapter Reference
 
@@ -408,7 +410,7 @@ Frees all memory occupied by @var{obj}, including all its
 subexpressions.
 @end deftypefun
 
-@node Example, Function Index, Reference
+@node Example, Function Index, Reference, (dir)
 @comment  node-name,  next,  previous,  up
 @chapter An Example
 
@@ -457,7 +459,7 @@ main (void)
 @}
 @end example
 
-@node Function Index,  , Example
+@node Function Index,  , Example, (dir)
 @comment  node-name,  next,  previous,  up
 @unnumbered Function Index
 
