@@ -3,8 +3,7 @@ SCAN_FUNC_NAME (lisp_stream_t *stream)
 {
     static char *delims = "\"();";
 
-    char *pos = stream->v.mmap.pos;
-    char *end = stream->v.mmap.end;
+    SCAN_DECLS;
 
     int c;
 

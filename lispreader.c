@@ -141,6 +141,7 @@ my_atoi (const char *start, const char *stop)
 }
 
 #define SCAN_FUNC_NAME _scan_mmap
+#define SCAN_DECLS     char *pos = stream->v.mmap.pos, *end = stream->v.mmap.end
 #define NEXT_CHAR      (pos == end ? EOF : *pos++)
 #define UNGET_CHAR(c)  (--pos)
 #define TOKEN_START(o) (mmap_token_start = pos - (o))
@@ -151,6 +152,7 @@ my_atoi (const char *start, const char *stop)
 #include "lispscan.h"
 
 #undef SCAN_FUNC_NAME
+#undef SCAN_DECLS
 #undef NEXT_CHAR
 #undef UNGET_CHAR
 #undef TOKEN_START
@@ -159,6 +161,7 @@ my_atoi (const char *start, const char *stop)
 #undef RETURN
 
 #define SCAN_FUNC_NAME  _scan
+#define SCAN_DECLS
 #define NEXT_CHAR       _next_char(stream)
 #define UNGET_CHAR(c)   _unget_char((c), stream)
 #define TOKEN_START(o)  _token_clear()
@@ -169,6 +172,7 @@ my_atoi (const char *start, const char *stop)
 #include "lispscan.h"
 
 #undef SCAN_FUNC_NAME
+#undef SCAN_DECLS
 #undef NEXT_CHAR
 #undef UNGET_CHAR
 #undef TOKEN_START

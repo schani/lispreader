@@ -23,6 +23,9 @@
 
 #include <allocator.h>
 
+#include <stdlib.h>
+#include <string.h>
+
 static void*
 malloc_allocator_alloc (void *allocator_data, size_t size)
 {
