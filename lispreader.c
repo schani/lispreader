@@ -333,7 +333,7 @@ lisp_make_symbol_with_allocator (allocator_t *allocator, const char *value)
 {
     lisp_object_t *obj = lisp_object_alloc(allocator, LISP_TYPE_SYMBOL);
 
-    obj->v.string = strdup(value);
+    obj->v.string = allocator_strdup(allocator, value);
 
     return obj;
 }
@@ -343,7 +343,7 @@ lisp_make_string_with_allocator (allocator_t *allocator, const char *value)
 {
     lisp_object_t *obj = lisp_object_alloc(allocator, LISP_TYPE_STRING);
 
-    obj->v.string = strdup(value);
+    obj->v.string = allocator_strdup(allocator, value);
 
     return obj;
 }

@@ -42,4 +42,6 @@ void init_pools_allocator (allocator_t *allocator, pools_t *pools);
 #define allocator_alloc(a,s)      ((a)->alloc((a)->allocator_data, (s)))
 #define allocator_free(a,c)       ((a)->free((a)->allocator_data, (c)))
 
+char* allocator_strdup (allocator_t *allocator, const char *str);
+
 #endif

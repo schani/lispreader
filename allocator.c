@@ -49,3 +49,15 @@ init_pools_allocator (allocator_t *allocator, pools_t *pools)
     allocator->free = pools_allocator_free;
     allocator->allocator_data = pools;
 }
+
+char*
+allocator_strdup (allocator_t *allocator, const char *str)
+{
+    size_t len = strlen(str) + 1;
+    char *copy = (char*)allocator_alloc(allocator, len);
+
+    if (copy != 0)
+	memcpy(copy, str, len);
+
+    return copy;
+}
