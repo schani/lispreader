@@ -1,6 +1,6 @@
-# $Id: Makefile 190 2002-01-27 21:27:01Z schani $
+# $Id: Makefile 191 2004-07-02 21:20:49Z schani $
 
-VERSION = 0.4
+VERSION = 0.5
 
 all :
 

@@ -1,8 +1,8 @@
-/* $Id: lispreader.c 190 2002-01-27 21:27:01Z schani $ */
+/* $Id: lispreader.c 191 2004-07-02 21:20:49Z schani $ */
 /*
  * lispreader.c
  *
- * Copyright (C) 1998-2000 Mark Probst
+ * Copyright (C) 1998-2004 Mark Probst
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -41,7 +41,7 @@
 #define TOKEN_FALSE                   10
 
 
-#define MAX_TOKEN_LENGTH           1024
+#define MAX_TOKEN_LENGTH           8192
 
 static char token_string[MAX_TOKEN_LENGTH + 1] = "";
 static int token_length = 0;
@@ -493,6 +493,8 @@ lisp_read (lisp_stream_t *in)
 void
 lisp_free (lisp_object_t *obj)
 {
+ restart:
+
     if (obj == 0)
 	return;
 
@@ -510,9 +512,55 @@ lisp_free (lisp_object_t *obj)
 
 	case LISP_TYPE_CONS :
 	case LISP_TYPE_PATTERN_CONS :
-	    lisp_free(obj->v.cons.car);
-	    lisp_free(obj->v.cons.cdr);
-	    break;
+	    /* If we just recursively free car and cdr we risk a stack
+	       overflow because lists may be nested arbitrarily deep.
+
+	       We can get rid of one recursive call with a tail call,
+	       but there's still one remaining.
+
+	       The solution is to flatten a recursive list until we
+	       can free the car without recursion.  Then we free the
+	       cdr with a tail call.
+
+	       The transformation we perform on the list is this:
+
+	         ((a . b) . c) -> (a . (b . c))
+	    */
+	    if (!lisp_nil_p(obj->v.cons.car)
+		&& (lisp_type(obj->v.cons.car) == LISP_TYPE_CONS
+		    || lisp_type(obj->v.cons.car) == LISP_TYPE_PATTERN_CONS))
+	    {
+		/* this is the transformation */
+
+		lisp_object_t *car, *cdar;
+
+		car = obj->v.cons.car;
+		cdar = car->v.cons.cdr;
+
+		car->v.cons.cdr = obj;
+
+		obj->v.cons.car = cdar;
+
+		obj = car;
+
+		goto restart;
+	    }
+	    else
+	    {
+		/* here we just free the car (which is not recursive),
+		   the cons itself and the cdr via a tail call.  */
+
+		lisp_object_t *tmp;
+
+		lisp_free(obj->v.cons.car);
+
+		tmp = obj;
+		obj = obj->v.cons.cdr;
+
+		free(tmp);
+
+		goto restart;
+	    }
 
 	case LISP_TYPE_PATTERN_VAR :
 	    lisp_free(obj->v.pattern.sub);
@@ -551,10 +599,11 @@ _compile_pattern (lisp_object_t **obj, int *index)
 						     { "boolean", LISP_PATTERN_BOOLEAN },
 						     { "list", LISP_PATTERN_LIST },
 						     { "or", LISP_PATTERN_OR },
+						     { "number", LISP_PATTERN_NUMBER },
 						     { 0, 0 }
 						 };
 		char *type_name;
-		int type;
+		int type = 0;	/* makes gcc happy */
 		int i;
 		lisp_object_t *pattern;
 
@@ -683,6 +732,12 @@ _match_pattern_var (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **
 		if (!matched)
 		    return 0;
 	    }
+	    break;
+
+	case LISP_PATTERN_NUMBER :
+	    if (obj == 0 || (lisp_type(obj) != LISP_TYPE_INTEGER
+			     && lisp_type(obj) != LISP_TYPE_REAL))
+		return 0;
 	    break;
 
 	default :

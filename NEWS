@@ -1,6 +1,14 @@
 News
 ****
 
+0.5
+===
+
+   * #?(number) pattern
+
+   * lisp_free can handly arbitrarily nested lists without
+     recursion.
+
 0.4
 ===
 

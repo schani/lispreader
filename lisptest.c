@@ -1,12 +1,39 @@
-/* $Id: lisptest.c 181 1999-12-21 12:54:22Z schani $ */
+/* $Id: lisptest.c 191 2004-07-02 21:20:49Z schani $ */
 
-#include "lispparse.h"
+#include "lispreader.h"
+
+static lisp_object_t*
+make_fib_tree (int n)
+{
+    if (n < 2)
+	return lisp_nil();
+
+    return lisp_make_cons(make_fib_tree(n - 1), make_fib_tree(n - 2));
+}
+
+static void
+free_test (void)
+{
+    int i;
+
+    for (i = 0; i < 50; ++i)
+    {
+	lisp_object_t *obj = make_fib_tree(25);
+
+	lisp_free(obj);
+    }
+}
 
 int
 main (void)
 {
     lisp_object_t *obj;
     lisp_stream_t stream;
+
+    lisp_dump(make_fib_tree(5), stdout);
+    printf("\n");
+
+    free_test();
 
     lisp_stream_init_file(&stream, stdin);
 

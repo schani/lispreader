@@ -1,4 +1,4 @@
-/* $Id: lispreader.h 190 2002-01-27 21:27:01Z schani $ */
+/* $Id: lispreader.h 191 2004-07-02 21:20:49Z schani $ */
 /*
  * lispreader.h
  *
@@ -50,6 +50,7 @@
 #define LISP_PATTERN_BOOLEAN    6
 #define LISP_PATTERN_LIST       7
 #define LISP_PATTERN_OR         8
+#define LISP_PATTERN_NUMBER     9
 
 typedef struct
 {
