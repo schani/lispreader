@@ -128,6 +128,7 @@ strings, integers, real numbers and booleans. It also provides a syntax
 for specifying patterns.
 
 @menu
+* Comments::                    
 * Lists::                       
 * Symbols::                     
 * Integers::                    
@@ -137,7 +138,18 @@ for specifying patterns.
 * Patterns::                    
 @end menu
 
-@node Lists, Symbols, Syntax, Syntax
+@node Comments, Lists, Syntax, Syntax
+@comment  node-name,  next,  previous,  up
+@section Comments
+
+Comments are started by the semicolon (@code{;}) and reach until the end
+of the line:
+
+@example
+; this line is completely ignored
+@end example
+
+@node Lists, Symbols, Comments, Syntax
 @comment  node-name,  next,  previous,  up
 @section Lists
 

@@ -1,12 +1,15 @@
-# $Id: Makefile.dist 182 1999-12-21 16:55:25Z schani $
+# $Id: Makefile.dist 186 2000-06-28 14:15:35Z schani $
 
 CC=gcc
 CFLAGS=-Wall -g -I.
 
-all : docexample
+all : docexample comment-test
 
 docexample : docexample.o lispreader.o
 	$(CC) -Wall -g -o docexample lispreader.o docexample.o
+
+comment-test: comment-test.o lispreader.o
+	$(CC) -Wall -g -o comment-test lispreader.o comment-test.o
 
 %.o : %.c
 	$(CC) $(CFLAGS) -c $<

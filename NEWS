@@ -1,6 +1,12 @@
 News
 ****
 
+0.3
+===
+
+   * Added code for ignoring Lisp style comments (strings starting with
+     the semicolon, ended by newline, contributed by Masatake Yamato)
+
 0.2
 ===
 
