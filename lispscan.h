@@ -8,8 +8,6 @@ SCAN_FUNC_NAME (lisp_stream_t *stream)
 
     int c;
 
-    _token_clear();
-
     do
     {
 	c = NEXT_CHAR;
@@ -35,6 +33,7 @@ SCAN_FUNC_NAME (lisp_stream_t *stream)
 	    RETURN(TOKEN_CLOSE_PAREN);
 
 	case '"' :
+	    _token_clear();
 	    while (1)
 	    {
 		c = NEXT_CHAR;
@@ -97,13 +96,15 @@ SCAN_FUNC_NAME (lisp_stream_t *stream)
 		int have_digits = 0;
 		int have_floating_point = 0;
 
+		TOKEN_START(1);
+
 		do
 		{
 		    if (isdigit(c))
 		        have_digits = 1;
 		    else if (c == '.')
 		        have_floating_point++;
-		    _token_append(c);
+		    TOKEN_APPEND(c);
 
 		    c = NEXT_CHAR;
 
@@ -113,6 +114,8 @@ SCAN_FUNC_NAME (lisp_stream_t *stream)
 
 		if (c != EOF)
 		    UNGET_CHAR(c);
+
+		TOKEN_STOP;
 
 		if (have_nondigits || !have_digits || have_floating_point > 1)
 		    RETURN(TOKEN_SYMBOL);
@@ -127,20 +130,29 @@ SCAN_FUNC_NAME (lisp_stream_t *stream)
 		{
 		    c = NEXT_CHAR;
 		    if (c != EOF && !isspace(c) && !strchr(delims, c))
-			_token_append('.');
+		    {
+			TOKEN_START(2);
+			TOKEN_APPEND('.');
+		    }
 		    else
 		    {
 			UNGET_CHAR(c);
 			RETURN(TOKEN_DOT);
 		    }
 		}
+		else
+		{
+		    TOKEN_START(1);
+		}
 		do
 		{
-		    _token_append(c);
+		    TOKEN_APPEND(c);
 		    c = NEXT_CHAR;
 		} while (c != EOF && !isspace(c) && !strchr(delims, c));
 		if (c != EOF)
 		    UNGET_CHAR(c);
+
+		TOKEN_STOP;
 
 		RETURN(TOKEN_SYMBOL);
 	    }

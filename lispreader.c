@@ -44,11 +44,12 @@
 #define TOKEN_TRUE                    9
 #define TOKEN_FALSE                   10
 
-
 #define MAX_TOKEN_LENGTH           8192
 
 static char token_string[MAX_TOKEN_LENGTH + 1] = "";
 static int token_length = 0;
+
+static char *mmap_token_start, *mmap_token_stop;
 
 static lisp_object_t end_marker = { LISP_TYPE_EOF };
 static lisp_object_t error_object = { LISP_TYPE_PARSE_ERROR };
@@ -68,6 +69,17 @@ _token_append (char c)
     assert(token_length < MAX_TOKEN_LENGTH);
 
     token_string[token_length++] = c;
+    token_string[token_length] = '\0';
+}
+
+static void
+copy_mmapped_token (void)
+{
+    token_length = mmap_token_stop - mmap_token_start;
+
+    assert(token_length < MAX_TOKEN_LENGTH);
+
+    memcpy(token_string, mmap_token_start, token_length);
     token_string[token_length] = '\0';
 }
 
@@ -114,9 +126,26 @@ _unget_char (char c, lisp_stream_t *stream)
     }
 }
 
+static int
+my_atoi (const char *start, const char *stop)
+{
+    int value = 0;
+
+    while (start < stop)
+    {
+	value = value * 10 + (*start - '0');
+	++start;
+    }
+
+    return value;
+}
+
 #define SCAN_FUNC_NAME _scan_mmap
 #define NEXT_CHAR      (pos == end ? EOF : *pos++)
 #define UNGET_CHAR(c)  (--pos)
+#define TOKEN_START(o) (mmap_token_start = pos - (o))
+#define TOKEN_APPEND(c)
+#define TOKEN_STOP     (mmap_token_stop = pos)
 #define RETURN(t)      ({ stream->v.mmap.pos = pos ; return (t); })
 
 #include "lispscan.h"
@@ -124,21 +153,31 @@ _unget_char (char c, lisp_stream_t *stream)
 #undef SCAN_FUNC_NAME
 #undef NEXT_CHAR
 #undef UNGET_CHAR
+#undef TOKEN_START
+#undef TOKEN_APPEND
+#undef TOKEN_STOP
 #undef RETURN
 
-#define SCAN_FUNC_NAME _scan
-#define NEXT_CHAR      _next_char(stream)
-#define UNGET_CHAR(c)  _unget_char((c), stream)
-#define RETURN(t)      return (t)
+#define SCAN_FUNC_NAME  _scan
+#define NEXT_CHAR       _next_char(stream)
+#define UNGET_CHAR(c)   _unget_char((c), stream)
+#define TOKEN_START(o)  _token_clear()
+#define TOKEN_APPEND(c) _token_append((c))
+#define TOKEN_STOP
+#define RETURN(t)       return (t)
 
 #include "lispscan.h"
 
 #undef SCAN_FUNC_NAME
 #undef NEXT_CHAR
 #undef UNGET_CHAR
+#undef TOKEN_START
+#undef TOKEN_APPEND
+#undef TOKEN_STOP
 #undef RETURN
 
-#define SCAN(s)        ((s)->type <= LISP_LAST_MMAPPED_STREAM ? _scan_mmap((s)) : _scan((s)))
+#define IS_STREAM_MMAPPED(s)   ((s)->type <= LISP_LAST_MMAPPED_STREAM)
+#define SCAN(s)                (IS_STREAM_MMAPPED((s)) ? _scan_mmap((s)) : _scan((s)))
 
 static lisp_object_t*
 lisp_object_alloc (allocator_t *allocator, int type)
@@ -266,14 +305,22 @@ lisp_make_real_with_allocator (allocator_t *allocator, float value)
     return obj;
 }
 
-lisp_object_t*
-lisp_make_symbol_with_allocator (allocator_t *allocator, const char *value)
+static lisp_object_t*
+lisp_make_symbol_with_allocator_internal (allocator_t *allocator, const char *str, size_t len)
 {
     lisp_object_t *obj = lisp_object_alloc(allocator, LISP_TYPE_SYMBOL);
 
-    obj->v.string = allocator_strdup(allocator, value);
+    obj->v.string = allocator_alloc(allocator, len + 1);
+    memcpy(obj->v.string, str, len + 1);
+    obj->v.string[len] = '\0';
 
     return obj;
+}
+
+lisp_object_t*
+lisp_make_symbol_with_allocator (allocator_t *allocator, const char *value)
+{
+    return lisp_make_symbol_with_allocator_internal(allocator, value, strlen(value));
 }
 
 lisp_object_t*
@@ -440,15 +487,24 @@ lisp_read_with_allocator (allocator_t *allocator, lisp_stream_t *in)
 	    return &close_paren_marker;
 
 	case TOKEN_SYMBOL :
-	    return lisp_make_symbol_with_allocator(allocator, token_string);
+	    if (IS_STREAM_MMAPPED(in))
+		return lisp_make_symbol_with_allocator_internal(allocator, mmap_token_start,
+								mmap_token_stop - mmap_token_start);
+	    else
+		return lisp_make_symbol_with_allocator(allocator, token_string);
 
 	case TOKEN_STRING :
 	    return lisp_make_string_with_allocator(allocator, token_string);
 
 	case TOKEN_INTEGER :
-	    return lisp_make_integer_with_allocator(allocator, atoi(token_string));
+	    if (IS_STREAM_MMAPPED(in))
+		return lisp_make_integer_with_allocator(allocator, my_atoi(mmap_token_start, mmap_token_stop));
+	    else
+		return lisp_make_integer_with_allocator(allocator, atoi(token_string));
 	
         case TOKEN_REAL :
+	    if (IS_STREAM_MMAPPED(in))
+		copy_mmapped_token();
 	    return lisp_make_real_with_allocator(allocator, (float)atof(token_string));
 
 	case TOKEN_DOT :
