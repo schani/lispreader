@@ -74,6 +74,10 @@ a framework for reading configuration files. To simplify interpretation
 of the read data, @code{lispreader} also provides functions for simple
 matching of expressions against patterns.
 
+@code{lispreader} is also used in at least one application to read and
+write data files. Lisp syntax is very suitable for doing this,
+especially if the data is organized hierachically.
+
 @node What lispreader is not, Licence, What lispreader is, Introduction
 @comment  node-name,  next,  previous,  up
 @section What is @code{lispreader} not?
@@ -276,6 +280,7 @@ equivalent to @code{#?(or #t #f)}.
 * Reading::                     
 * Writing::                     
 * Examining::                   
+* Creating::                    
 * Matching::                    
 * Freeing::                     
 @end menu
@@ -337,7 +342,7 @@ Writes the external representation of @var{obj}, which can be read again
 by @code{lisp_read}, to @var{out}.
 @end deftypefun
 
-@node Examining, Matching, Writing, Reference
+@node Examining, Creating, Writing, Reference
 @comment  node-name,  next,  previous,  up
 @section Examining expressions
 
@@ -348,6 +353,8 @@ Returns the type of the lisp object @code{obj}.
 The returned type can be one of
 
 @table @code
+@item LISP_TYPE_NIL
+The empty list.
 @item LISP_TYPE_SYMBOL
 A symbol.
 @item LISP_TYPE_INTEGER
@@ -369,9 +376,23 @@ Indicates that end-of-file occured during reading the expression.
 Indicates a malformed expression.
 @end table
 
+@deftypefun int lisp_nil_p (lisp_object_t* @var{obj})
+If @var{obj} is the empty list, returns a non-zero value, otherwise
+zero.
+@end deftypefun
+
+@deftypefun int lisp_integer_p (lisp_object_t* @var{obj})
+If @var{obj} is an integer object, returns a non-zero value, otherwise
+zero.
+@end deftypefun
+
 @deftypefun int lisp_integer (lisp_object_t* @var{obj})
 Returns the integer value for @var{obj}. This function must not be
 called when the type of @var{obj} is not @code{LISP_TYPE_INTEGER}.
+@end deftypefun
+
+@deftypefun int lisp_real_p (lisp_object_t* @var{obj})
+If @var{obj} is a real object, returns a non-zero value, otherwise zero.
 @end deftypefun
 
 @deftypefun float lisp_real (lisp_object_t* @var{obj})
@@ -380,10 +401,19 @@ when the type of @var{obj} is not either @code{LISP_TYPE_REAL} or
 @code{LISP_TYPE_INTEGER}.
 @end deftypefun
 
+@deftypefun int lisp_symbol_p (lisp_object_t* @var{obj})
+If @var{obj} is a symbol, returns a non-zero value, otherwise zero.
+@end deftypefun
+
 @deftypefun char* lisp_symbol (lisp_object_t* @var{obj})
 Returns the string for the symbol stored in @var{obj}. This function
 must not be called when the type of @var{obj} is not
 @code{LISP_TYPE_SYMBOL}.
+@end deftypefun
+
+@deftypefun int lisp_string_p (lisp_object_t* @var{obj})
+If @var{obj} is a string object, returns a non-zero value, otherwise
+zero.
 @end deftypefun
 
 @deftypefun char* lisp_string (lisp_object_t* @var{obj})
@@ -391,11 +421,20 @@ Returns the string value for @var{obj}. This function must not be called
 when the type of @var{obj} is not @code{LISP_TYPE_STRING}.
 @end deftypefun
 
+@deftypefun int lisp_boolean_p (lisp_object_t* @var{obj})
+If @var{obj} is a boolean object, returns a non-zero value, otherwise
+zero.
+@end deftypefun
+
 @deftypefun int lisp_boolean (lisp_object_t* @var{obj})
 Returns the boolean value for @var{obj}. If @var{obj} represents false,
 the result is @code{0}, otherwise some integer not equal to
 @code{0}. This function must not be called when the type of @var{obj} is
 not @code{LISP_TYPE_BOOLEAN}.
+@end deftypefun
+
+@deftypefun int lisp_cons_p (lisp_object_t* @var{obj})
+If @var{obj} is a cons, returns a non-zero value, otherwise zero.
 @end deftypefun
 
 @deftypefun lisp_object_t* lisp_car (lisp_object_t* @var{obj})
@@ -408,13 +447,64 @@ Returns the cdr of the cons stored in @var{obj}. This function must not
 be called when type type of @var{obj} is not @code{LISP_TYPE_CONS}.
 @end deftypefun
 
+@deftypefun lisp_object_t* lisp_cxr (lisp_object_t* @var{obj}, const char* @var{x})
+@var{x} must be a string consisting of the chars @code{a} and
+@var{d}. Returns the object resulting from applying @code{lisp_car} and
+@code{lisp_cdr} according to @var{x} with @code{a} corresponding to the
+former and @code{d} to the latter starting with @var{obj} in reverse
+order. As an example, @code{lisp_cxr(o,"ad")} is equivalent to
+@code{lisp_car(lisp_cdr(o))}.
+@end deftypefun
+
 @deftypefun int lisp_list_length (lisp_object_t* @var{obj})
 Returns the length of the list stored in @var{obj}. A list is defined as
 the empty list, which is represented by a null pointer, or a cons, the
 cdr of which is a list.
 @end deftypefun
 
-@node Matching, Freeing, Examining, Reference
+@deftypefun lisp_object_t* lisp_list_nth_cdr (lisp_object_t* @var{obj}, int @var{n})
+Returns the result of iterating @code{lisp_cdr} @var{n} times on
+@var{obj}.
+@end deftypefun
+
+@deftypefun lisp_object_t* lisp_list_nth (lisp_object_t* @var{obj}, int @var{n})
+Returns the car of the result of applying @code{lisp_list_nth_cdr} on
+@var{obj} with @var{n}.
+@end deftypefun
+
+@node Creating, Matching, Examining, Reference
+@comment  node-name,  next,  previous,  up
+@section Creating expressions
+
+@deftypefun lisp_object_t* lisp_nil ()
+Returns the empty list.
+@end deftypefun
+
+@deftypefun lisp_object_t* lisp_make_integer (int @var{value})
+Returns an integer object with the value @var{value}.
+@end deftypefun
+
+@deftypefun lisp_object_t* lisp_make_real (float @var{value})
+Returns a real object with the value @var{value}.
+@end deftypefun
+
+@deftypefun lisp_object_t* lisp_make_symbol (const char* @var{value})
+Returns a symbol object with the name @var{value}.
+@end deftypefun
+
+@deftypefun lisp_object_t* lisp_make_string (const char* @var{value})
+Returns a string object with the value @var{value}.
+@end deftypefun
+
+@deftypefun lisp_object_t* lisp_make_cons (lisp_object_t* @var{car}, lisp_object_t* @var{cdr})
+Returns a cons object with car @var{car} and cdr @var{cdr}.
+@end deftypefun
+
+@deftypefun lisp_object_t* lisp_make_boolean (int @var{value})
+Returns a boolean. Its value is false if @var{value} is @code{0}, true otherwise.
+@end deftypefun
+
+@node Matching, Freeing, Creating, Reference
 @comment  node-name,  next,  previous,  up
 @section Matching expressions against patterns
 

@@ -1,6 +1,15 @@
 News
 ****
 
+0.4
+===
+
+   * Functions for making expressions (contributed by Masatake Yamato)
+
+   * Type predicates (contributed by Masatake Yamato)
+
+   * lisp_cxr
+
 0.3
 ===
 

@@ -1,4 +1,4 @@
-/* $Id: lispreader.c 187 2000-07-09 21:08:28Z schani $ */
+/* $Id: lispreader.c 190 2002-01-27 21:27:01Z schani $ */
 /*
  * lispreader.c
  *
@@ -265,7 +265,7 @@ _scan (lisp_stream_t *stream)
     return TOKEN_ERROR;
 }
 
-lisp_object_t*
+static lisp_object_t*
 lisp_object_alloc (int type)
 {
     lisp_object_t *obj = (lisp_object_t*)malloc(sizeof(lisp_object_t));
@@ -310,10 +310,94 @@ lisp_stream_init_any (lisp_stream_t *stream, void *data,
 }
 
 lisp_object_t*
+lisp_make_integer (int value)
+{
+    lisp_object_t *obj = lisp_object_alloc(LISP_TYPE_INTEGER);
+
+    obj->v.integer = value;
+
+    return obj;
+}
+
+lisp_object_t*
+lisp_make_real (float value)
+{
+    lisp_object_t *obj = lisp_object_alloc(LISP_TYPE_REAL);
+
+    obj->v.real = value;
+
+    return obj;
+}
+
+lisp_object_t*
+lisp_make_symbol (const char *value)
+{
+    lisp_object_t *obj = lisp_object_alloc(LISP_TYPE_SYMBOL);
+
+    obj->v.string = strdup(value);
+
+    return obj;
+}
+
+lisp_object_t*
+lisp_make_string (const char *value)
+{
+    lisp_object_t *obj = lisp_object_alloc(LISP_TYPE_STRING);
+
+    obj->v.string = strdup(value);
+
+    return obj;
+}
+
+lisp_object_t*
+lisp_make_cons (lisp_object_t *car, lisp_object_t *cdr)
+{
+    lisp_object_t *obj = lisp_object_alloc(LISP_TYPE_CONS);
+
+    obj->v.cons.car = car;
+    obj->v.cons.cdr = cdr;
+
+    return obj;
+}
+
+lisp_object_t*
+lisp_make_boolean (int value)
+{
+    lisp_object_t *obj = lisp_object_alloc(LISP_TYPE_BOOLEAN);
+
+    obj->v.integer = value ? 1 : 0;
+
+    return obj;
+}
+
+static lisp_object_t*
+lisp_make_pattern_cons (lisp_object_t *car, lisp_object_t *cdr)
+{
+    lisp_object_t *obj = lisp_object_alloc(LISP_TYPE_PATTERN_CONS);
+
+    obj->v.cons.car = car;
+    obj->v.cons.cdr = cdr;
+
+    return obj;
+}
+
+static lisp_object_t*
+lisp_make_pattern_var (int type, int index, lisp_object_t *sub)
+{
+    lisp_object_t *obj = lisp_object_alloc(LISP_TYPE_PATTERN_VAR);
+
+    obj->v.pattern.type = type;
+    obj->v.pattern.index = index;
+    obj->v.pattern.sub = sub;
+
+    return obj;
+}
+
+lisp_object_t*
 lisp_read (lisp_stream_t *in)
 {
     int token = _scan(in);
-    lisp_object_t *obj = 0;
+    lisp_object_t *obj = lisp_nil();
 
     if (token == TOKEN_EOF)
 	return &end_marker;
@@ -329,7 +413,7 @@ lisp_read (lisp_stream_t *in)
 	case TOKEN_OPEN_PAREN :
 	case TOKEN_PATTERN_OPEN_PAREN :
 	    {
-		lisp_object_t *last = 0, *car;
+		lisp_object_t *last = lisp_nil(), *car;
 
 		do
 		{
@@ -341,7 +425,7 @@ lisp_read (lisp_stream_t *in)
 		    }
 		    else if (car == &dot_marker)
 		    {
-			if (last == 0)
+			if (lisp_nil_p(last))
 			{
 			    lisp_free(obj);
 			    return &error_object;
@@ -368,14 +452,10 @@ lisp_read (lisp_stream_t *in)
 		    }
 		    else if (car != &close_paren_marker)
 		    {
-			if (last == 0)
-			    obj = last = lisp_object_alloc(token == TOKEN_OPEN_PAREN
-							   ? LISP_TYPE_CONS
-							   : LISP_TYPE_PATTERN_CONS);
+			if (lisp_nil_p(last))
+			    obj = last = (token == TOKEN_OPEN_PAREN ? lisp_make_cons(car, lisp_nil()) : lisp_make_pattern_cons(car, lisp_nil()));
 			else
-			    last = last->v.cons.cdr = lisp_object_alloc(LISP_TYPE_CONS);
-			last->v.cons.car = car;
-			last->v.cons.cdr = 0;
+			    last = last->v.cons.cdr = lisp_make_cons(car, lisp_nil());
 		    }
 		} while (car != &close_paren_marker);
 	    }
@@ -385,37 +465,25 @@ lisp_read (lisp_stream_t *in)
 	    return &close_paren_marker;
 
 	case TOKEN_SYMBOL :
-	    obj = lisp_object_alloc(LISP_TYPE_SYMBOL);
-	    obj->v.string = strdup(token_string);
-	    return obj;
+	    return lisp_make_symbol(token_string);
 
 	case TOKEN_STRING :
-	    obj = lisp_object_alloc(LISP_TYPE_STRING);
-	    obj->v.string = strdup(token_string);
-	    return obj;
+	    return lisp_make_string(token_string);
 
 	case TOKEN_INTEGER :
-	    obj = lisp_object_alloc(LISP_TYPE_INTEGER);
-	    obj->v.integer = atoi(token_string);
-	    return obj;
+	    return lisp_make_integer(atoi(token_string));
 	
         case TOKEN_REAL :
-	    obj = lisp_object_alloc(LISP_TYPE_REAL);
-	    obj->v.real = (float)atof(token_string);
-	    return obj;
+	    return lisp_make_real((float)atof(token_string));
 
 	case TOKEN_DOT :
 	    return &dot_marker;
 
 	case TOKEN_TRUE :
-	    obj = lisp_object_alloc(LISP_TYPE_BOOLEAN);
-	    obj->v.integer = 1;
-	    return obj;
+	    return lisp_make_boolean(1);
 
 	case TOKEN_FALSE :
-	    obj = lisp_object_alloc(LISP_TYPE_BOOLEAN);
-	    obj->v.integer = 0;
-	    return obj;
+	    return lisp_make_boolean(0);
     }
 
     assert(0);
@@ -509,10 +577,7 @@ _compile_pattern (lisp_object_t **obj, int *index)
 		if (type != LISP_PATTERN_OR && lisp_cdr(*obj) != 0)
 		    return 0;
 
-		pattern = lisp_object_alloc(LISP_TYPE_PATTERN_VAR);
-		pattern->v.pattern.type = type;
-		pattern->v.pattern.index = (*index)++;
-		pattern->v.pattern.sub = 0;
+		pattern = lisp_make_pattern_var(type, (*index)++, lisp_nil());
 
 		if (type == LISP_PATTERN_OR)
 		{
@@ -526,7 +591,7 @@ _compile_pattern (lisp_object_t **obj, int *index)
 
 		    pattern->v.pattern.sub = cdr;
 
-		    (*obj)->v.cons.cdr = 0;
+		    (*obj)->v.cons.cdr = lisp_nil();
 		}
 
 		lisp_free(*obj);
@@ -781,6 +846,22 @@ lisp_cdr (lisp_object_t *obj)
     return obj->v.cons.cdr;
 }
 
+lisp_object_t*
+lisp_cxr (lisp_object_t *obj, const char *x)
+{
+    int i;
+
+    for (i = strlen(x) - 1; i >= 0; --i)
+	if (x[i] == 'a')
+	    obj = lisp_car(obj);
+	else if (x[i] == 'd')
+	    obj = lisp_cdr(obj);
+	else
+	    assert(0);
+
+    return obj;
+}
+
 int
 lisp_list_length (lisp_object_t *obj)
 {
@@ -798,7 +879,7 @@ lisp_list_length (lisp_object_t *obj)
 }
 
 lisp_object_t*
-lisp_list_nth (lisp_object_t *obj, int index)
+lisp_list_nth_cdr (lisp_object_t *obj, int index)
 {
     while (index > 0)
     {
@@ -808,6 +889,14 @@ lisp_list_nth (lisp_object_t *obj, int index)
 	--index;
 	obj = obj->v.cons.cdr;
     }
+
+    return obj;
+}
+
+lisp_object_t*
+lisp_list_nth (lisp_object_t *obj, int index)
+{
+    obj = lisp_list_nth_cdr(obj, index);
 
     assert(obj != 0);
 

@@ -1,4 +1,4 @@
-/* $Id: lispreader.h 187 2000-07-09 21:08:28Z schani $ */
+/* $Id: lispreader.h 190 2002-01-27 21:27:01Z schani $ */
 /*
  * lispreader.h
  *
@@ -121,8 +121,30 @@ char* lisp_string (lisp_object_t *obj);
 int lisp_boolean (lisp_object_t *obj);
 lisp_object_t* lisp_car (lisp_object_t *obj);
 lisp_object_t* lisp_cdr (lisp_object_t *obj);
+
+lisp_object_t* lisp_cxr (lisp_object_t *obj, const char *x);
+
+lisp_object_t* lisp_make_integer (int value);
+lisp_object_t* lisp_make_real (float value);
+lisp_object_t* lisp_make_symbol (const char *value);
+lisp_object_t* lisp_make_string (const char *value);
+lisp_object_t* lisp_make_cons (lisp_object_t *car, lisp_object_t *cdr);
+lisp_object_t* lisp_make_boolean (int value);
+
 int lisp_list_length (lisp_object_t *obj);
+lisp_object_t* lisp_list_nth_cdr (lisp_object_t *obj, int index);
 lisp_object_t* lisp_list_nth (lisp_object_t *obj, int index);
+
 void lisp_dump (lisp_object_t *obj, FILE *out);
+
+#define lisp_nil()           ((lisp_object_t*)0)
+
+#define lisp_nil_p(obj)      (obj == 0)
+#define lisp_integer_p(obj)  (lisp_type((obj)) == LISP_TYPE_INTEGER)
+#define lisp_real_p(obj)     (lisp_type((obj)) == LISP_TYPE_REAL)
+#define lisp_symbol_p(obj)   (lisp_type((obj)) == LISP_TYPE_SYMBOL)
+#define lisp_string_p(obj)   (lisp_type((obj)) == LISP_TYPE_STRING)
+#define lisp_cons_p(obj)     (lisp_type((obj)) == LISP_TYPE_CONS)
+#define lisp_boolean_p(obj)  (lisp_type((obj)) == LISP_TYPE_BOOLEAN)
 
 #endif

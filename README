@@ -1,4 +1,4 @@
-lispreader 0.3
+lispreader 0.4
 ==============
 
 lispreader is a small library for reading expressions in Lisp
@@ -7,6 +7,10 @@ of structured data between processes but its main purpose is now to
 provide a framework for reading configuration files. To simplify
 interpretation of the read data, lispreader also provides functions
 for simple matching of expressions against patterns.
+
+lispreader is also used in at least one application to read and write
+data files. Lisp syntax is very suitable for doing this, especially if
+the data is organized hierachically.
 
 
 Documentation
