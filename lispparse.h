@@ -1,4 +1,4 @@
-/* $Id: lispparse.h 179 1999-12-05 21:10:10Z schani $ */
+/* $Id: lispparse.h 180 1999-12-19 18:49:55Z schani $ */
 /*
  * lispparse.h
  *
@@ -28,8 +28,9 @@
 #define LISP_STREAM_FILE       1
 #define LISP_STREAM_STRING     2
 
-#define LISP_TYPE_EOF           0
-#define LISP_TYPE_INTERNAL      0
+#define LISP_TYPE_INTERNAL      -3
+#define LISP_TYPE_PARSE_ERROR   -2
+#define LISP_TYPE_EOF           -1
 #define LISP_TYPE_IDENT         1
 #define LISP_TYPE_INTEGER       2
 #define LISP_TYPE_STRING        3
@@ -92,6 +93,8 @@ lisp_stream_t* lisp_stream_init_string (lisp_stream_t *stream, char *buf);
 
 lisp_object_t* lisp_read (lisp_stream_t *in);
 void lisp_free (lisp_object_t *obj);
+
+lisp_object_t* lisp_read_from_string (char *buf);
 
 int lisp_compile_pattern (lisp_object_t **obj);
 int lisp_match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **vars);

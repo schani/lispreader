@@ -1,4 +1,4 @@
-/* $Id: lisptest.c 179 1999-12-05 21:10:10Z schani $ */
+/* $Id: lisptest.c 180 1999-12-19 18:49:55Z schani $ */
 
 #include "lispparse.h"
 
@@ -15,18 +15,23 @@ main (void)
 	obj = lisp_read(&stream);
 	if (obj == 0 || lisp_type(obj) != LISP_TYPE_EOF)
 	{
-	    lisp_object_t *vars[3];
+	    lisp_object_t *vars[5];
 
 	    lisp_dump(obj, stdout);
 	    fprintf(stdout, "\n");
 
-	    if (lisp_match_string("(beidel #?(integer) #?(boolean) . #?(list))", obj, vars))
+	    if (lisp_match_string("(beidel #?(or #?(integer) #?(string)) #?(boolean) . #?(list))",
+				  obj, vars))
 	    {
 		lisp_dump(vars[0], stdout);
 		fprintf(stdout, "\n");
 		lisp_dump(vars[1], stdout);
 		fprintf(stdout, "\n");
 		lisp_dump(vars[2], stdout);
+		fprintf(stdout, "\n");
+		lisp_dump(vars[3], stdout);
+		fprintf(stdout, "\n");
+		lisp_dump(vars[4], stdout);
 		fprintf(stdout, "\n");
 	    }
 

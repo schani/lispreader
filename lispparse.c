@@ -1,8 +1,8 @@
-/* $Id: lispparse.c 179 1999-12-05 21:10:10Z schani $ */
+/* $Id: lispparse.c 180 1999-12-19 18:49:55Z schani $ */
 /*
  * lispparse.c
  *
- * Copyright (C) 1998 Mark Probst
+ * Copyright (C) 1998-1999 Mark Probst
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -27,6 +27,8 @@
 
 #include "lispparse.h"
 
+#define TOKEN_ERROR                   -1
+#define TOKEN_EOF                     0
 #define TOKEN_OPEN_PAREN              1
 #define TOKEN_CLOSE_PAREN             2
 #define TOKEN_IDENT                   3
@@ -43,7 +45,9 @@ static char token_string[MAX_TOKEN_LENGTH + 1] = "";
 static int token_length = 0;
 
 static lisp_object_t end_marker = { LISP_TYPE_EOF };
-static lisp_object_t dot_marker = { LISP_TYPE_INTEGER };
+static lisp_object_t error_object = { LISP_TYPE_PARSE_ERROR };
+static lisp_object_t close_paren_marker = { LISP_TYPE_PARSE_ERROR };
+static lisp_object_t dot_marker = { LISP_TYPE_PARSE_ERROR };
 
 static void
 _token_clear (void)
@@ -115,7 +119,7 @@ _scan (lisp_stream_t *stream)
     {
 	c = _next_char(stream);
 	if (c == EOF)
-	    return 0;
+	    return TOKEN_EOF;
     } while (isspace(c));
 
     switch (c)
@@ -131,7 +135,7 @@ _scan (lisp_stream_t *stream)
 	    {
 		c = _next_char(stream);
 		if (c == EOF)
-		    return 0;
+		    return TOKEN_ERROR;
 		if (c == '"')
 		    break;
 		if (c == '\\')
@@ -141,7 +145,7 @@ _scan (lisp_stream_t *stream)
 		    switch (c)
 		    {
 			case EOF :
-			    return 0;
+			    return TOKEN_ERROR;
 			
 			case 'n' :
 			    c = '\n';
@@ -160,7 +164,7 @@ _scan (lisp_stream_t *stream)
 	case '#' :
 	    c = _next_char(stream);
 	    if (c == EOF)
-		return 0;
+		return TOKEN_ERROR;
 
 	    switch (c)
 	    {
@@ -173,11 +177,12 @@ _scan (lisp_stream_t *stream)
 		case '?' :
 		    c = _next_char(stream);
 		    if (c == EOF)
-			return 0;
+			return TOKEN_ERROR;
 
 		    if (c == '(')
 			return TOKEN_PATTERN_OPEN_PAREN;
-		    return 0;
+		    else
+			return TOKEN_ERROR;
 	    }
 	    return 0;
 
@@ -220,7 +225,7 @@ _scan (lisp_stream_t *stream)
     }
 
     assert(0);
-    return 0;
+    return TOKEN_ERROR;
 }
 
 lisp_object_t*
@@ -258,11 +263,17 @@ lisp_read (lisp_stream_t *in)
     int token = _scan(in);
     lisp_object_t *obj = 0;
 
-    if (token == 0)
+    if (token == TOKEN_EOF)
 	return &end_marker;
 
     switch (token)
     {
+	case TOKEN_ERROR :
+	    return &error_object;
+
+	case TOKEN_EOF :
+	    return &end_marker;
+
 	case TOKEN_OPEN_PAREN :
 	case TOKEN_PATTERN_OPEN_PAREN :
 	    {
@@ -271,42 +282,55 @@ lisp_read (lisp_stream_t *in)
 		do
 		{
 		    car = lisp_read(in);
-		    if (car == &dot_marker)
+		    if (car == &error_object || car == &end_marker)
+		    {
+			lisp_free(obj);
+			return &error_object;
+		    }
+		    else if (car == &dot_marker)
 		    {
 			if (last == 0)
-			    return &end_marker;	/* parse error */
+			{
+			    lisp_free(obj);
+			    return &error_object;
+			}
 
 			car = lisp_read(in);
-			if (car != &end_marker)
+			if (car == &error_object || car == &end_marker)
+			{
+			    lisp_free(obj);
+			    return car;
+			}
+			else
 			{
 			    last->v.cons.cdr = car;
 
-			    car = lisp_read(in);
-			    if (car != &end_marker)
-				return &end_marker; /* parse error */
+			    if (_scan(in) != TOKEN_CLOSE_PAREN)
+			    {
+				lisp_free(obj);
+				return &error_object;
+			    }
+
+			    car = &close_paren_marker;
 			}
-			else
-			    return &end_marker;	/* parse error */
 		    }
-		    else if (car != &end_marker)
+		    else if (car != &close_paren_marker)
 		    {
 			if (last == 0)
 			    obj = last = lisp_object_alloc(token == TOKEN_OPEN_PAREN
 							   ? LISP_TYPE_CONS
 							   : LISP_TYPE_PATTERN_CONS);
 			else
-			    last = last->v.cons.cdr = lisp_object_alloc(token == TOKEN_OPEN_PAREN
-									? LISP_TYPE_CONS
-									: LISP_TYPE_PATTERN_CONS);
+			    last = last->v.cons.cdr = lisp_object_alloc(LISP_TYPE_CONS);
 			last->v.cons.car = car;
 			last->v.cons.cdr = 0;
 		    }
-		} while (car != &end_marker);
+		} while (car != &close_paren_marker);
 	    }
 	    return obj;
 
 	case TOKEN_CLOSE_PAREN :
-	    return &end_marker;
+	    return &close_paren_marker;
 
 	case TOKEN_IDENT :
 	    obj = lisp_object_alloc(LISP_TYPE_IDENT);
@@ -338,7 +362,7 @@ lisp_read (lisp_stream_t *in)
     }
 
     assert(0);
-    return &end_marker;
+    return &error_object;
 }
 
 void
@@ -349,6 +373,11 @@ lisp_free (lisp_object_t *obj)
 
     switch (obj->type)
     {
+	case LISP_TYPE_INTERNAL :
+	case LISP_TYPE_PARSE_ERROR :
+	case LISP_TYPE_EOF :
+	    return;
+
 	case LISP_TYPE_IDENT :
 	case LISP_TYPE_STRING :
 	    free(obj->v.string);
@@ -366,6 +395,15 @@ lisp_free (lisp_object_t *obj)
     }
 
     free(obj);
+}
+
+lisp_object_t*
+lisp_read_from_string (char *buf)
+{
+    lisp_stream_t stream;
+
+    lisp_stream_init_string(&stream, buf);
+    return lisp_read(&stream);
 }
 
 static int
@@ -463,6 +501,9 @@ _match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **vars
 {
     assert(lisp_type(pattern) == LISP_TYPE_PATTERN_VAR);
 
+    if (vars != 0)
+	vars[pattern->v.pattern.index] = &error_object;
+
     switch (pattern->v.pattern.type)
     {
 	case LISP_PATTERN_ANY :
@@ -491,18 +532,23 @@ _match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **vars
 	case LISP_PATTERN_LIST :
 	    if (obj == 0 || lisp_type(obj) != LISP_TYPE_CONS)
 		return 0;
+	    break;
 
 	case LISP_PATTERN_OR :
 	    {
 		lisp_object_t *sub;
+		int matched = 0;
 
 		for (sub = pattern->v.pattern.sub; sub != 0; sub = lisp_cdr(sub))
 		{
 		    assert(lisp_type(sub) == LISP_TYPE_CONS);
 
-		    if (!lisp_match_pattern(lisp_car(sub), obj, vars))
-			return 0;
+		    if (lisp_match_pattern(lisp_car(sub), obj, vars))
+			matched = 1;
 		}
+
+		if (!matched)
+		    return 0;
 	    }
 	    break;
 
@@ -563,13 +609,13 @@ lisp_match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **
 int
 lisp_match_string (char *pattern_string, lisp_object_t *obj, lisp_object_t **vars)
 {
-    lisp_stream_t stream;
     lisp_object_t *pattern;
     int result;
 
-    pattern = lisp_read(lisp_stream_init_string(&stream, pattern_string));
+    pattern = lisp_read_from_string(pattern_string);
 
-    if (pattern != 0 && lisp_type(pattern) == LISP_TYPE_EOF)
+    if (pattern != 0 && (lisp_type(pattern) == LISP_TYPE_EOF
+			 || lisp_type(pattern) == LISP_TYPE_PARSE_ERROR))
 	return 0;
 
     if (!lisp_compile_pattern(&pattern))
@@ -683,6 +729,14 @@ lisp_dump (lisp_object_t *obj, FILE *out)
 
     switch (lisp_type(obj))
     {
+	case LISP_TYPE_EOF :
+	    fputs("#<eof>", out);
+	    break;
+
+	case LISP_TYPE_PARSE_ERROR :
+	    fputs("#<error>", out);
+	    break;
+
 	case LISP_TYPE_INTEGER :
 	    fprintf(out, "%d", lisp_integer(obj));
 	    break;
@@ -708,7 +762,7 @@ lisp_dump (lisp_object_t *obj, FILE *out)
 
 	case LISP_TYPE_CONS :
 	case LISP_TYPE_PATTERN_CONS :
-	    fputs(lisp_type(obj) == LISP_TYPE_CONS ? "(" : "?(", out);
+	    fputs(lisp_type(obj) == LISP_TYPE_CONS ? "(" : "#?(", out);
 	    while (obj != 0)
 	    {
 		lisp_dump(lisp_car(obj), out);

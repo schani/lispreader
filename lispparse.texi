@@ -1,0 +1,51 @@
+What is lispreader?
+
+lispreader is a small library for reading expressions in Lisp syntax. It
+has originally been written to facilitate simple exchange of structured
+data between processes but its main purpose is now to provide a
+framework for reading configuration files. To simplify interpretation of
+the read data, lispreader also provides functions for simple matching of
+expressions against patterns.
+
+What is lispreader not?
+
+lispreader is not a Lisp system in that it cannot, by itself, interpret
+Lisp expressions. It only provides a subset of the features of libraries
+like Guile of librep (namely the reading of expressions) and does thus
+not compete directly with those. If all you need is a simple way to read
+Lisp expressions without interpreting them with Lisp semantics, you will
+probably be satisfied with lispreader.
+
+Reference
+
+lisp_stream_t* lisp_stream_init_file (lisp_stream_t *stream, FILE *file)
+
+Initializes stream to be a file stream reading from file. The caller is
+still responsible to close file when it is not needed any more.
+
+lisp_stream_t* lisp_stream_init_string (lisp_stream_t *stream, char *buf)
+
+Initializes stream to be a string stream reading from buf. buf is not
+copied by this function, hence the effects of reading from the stream
+after modifying buf are undefined.
+
+lisp_object_t* lisp_read (lisp_stream_t *in)
+
+Reads a Lisp expression from the stream in and returns it. The caller is
+responsible for deallocating its memory using lisp_free().
+
+void lisp_free (lisp_object_t *obj)
+
+Frees all memory occupied by obj, including all its subexpressions.
+
+lisp_object_t* lisp_read_from_string (char *buf)
+
+Reads a Lisp expression from the string buf and returns it. The caller
+is responsible for deallocating its memory using lisp_free(). Although
+buf may contain more than one expression, only the first is read. If you
+need to read more than one expression from a string, use lisp_read() on
+a string stream created by lisp_stream_init_string().
+
+int lisp_type (lisp_object_t *obj)
+
+Returns the type of the lisp object obj.
