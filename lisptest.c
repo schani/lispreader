@@ -1,4 +1,4 @@
-/* $Id: lisptest.c 178 1999-11-18 23:02:04Z schani $ */
+/* $Id: lisptest.c 179 1999-12-05 21:10:10Z schani $ */
 
 #include "lispparse.h"
 
@@ -20,7 +20,7 @@ main (void)
 	    lisp_dump(obj, stdout);
 	    fprintf(stdout, "\n");
 
-	    if (lisp_match("(beidel ?(integer) ?(boolean) . ?(list))", obj, vars))
+	    if (lisp_match_string("(beidel #?(integer) #?(boolean) . #?(list))", obj, vars))
 	    {
 		lisp_dump(vars[0], stdout);
 		fprintf(stdout, "\n");

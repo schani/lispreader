@@ -1,4 +1,4 @@
-/* $Id: lispparse.h 174 1999-11-18 23:00:09Z schani $ */
+/* $Id: lispparse.h 179 1999-12-05 21:10:10Z schani $ */
 /*
  * lispparse.h
  *
@@ -36,6 +36,15 @@
 #define LISP_TYPE_CONS          4
 #define LISP_TYPE_PATTERN_CONS  5
 #define LISP_TYPE_BOOLEAN       6
+#define LISP_TYPE_PATTERN_VAR   7
+
+#define LISP_PATTERN_ANY        1
+#define LISP_PATTERN_IDENT      2
+#define LISP_PATTERN_STRING     3
+#define LISP_PATTERN_INTEGER    4
+#define LISP_PATTERN_BOOLEAN    5
+#define LISP_PATTERN_LIST       6
+#define LISP_PATTERN_OR         7
 
 typedef struct
 {
@@ -68,6 +77,13 @@ struct _lisp_object_t
 
 	char *string;
 	int integer;
+
+	struct
+	{
+	    int type;
+	    int index;
+	    struct _lisp_object_t *sub;
+	} pattern;
     } v;
 };
 
@@ -77,7 +93,9 @@ lisp_stream_t* lisp_stream_init_string (lisp_stream_t *stream, char *buf);
 lisp_object_t* lisp_read (lisp_stream_t *in);
 void lisp_free (lisp_object_t *obj);
 
-int lisp_match (char *pattern_string, lisp_object_t *obj, lisp_object_t **vars);
+int lisp_compile_pattern (lisp_object_t **obj);
+int lisp_match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **vars);
+int lisp_match_string (char *pattern_string, lisp_object_t *obj, lisp_object_t **vars);
 
 int lisp_type (lisp_object_t *obj);
 int lisp_integer (lisp_object_t *obj);
