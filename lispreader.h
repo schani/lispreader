@@ -1,4 +1,4 @@
-/* $Id: lispreader.h 184 2000-04-12 22:28:53Z schani $ */
+/* $Id: lispreader.h 187 2000-07-09 21:08:28Z schani $ */
 /*
  * lispreader.h
  *
@@ -27,6 +27,7 @@
 
 #define LISP_STREAM_FILE       1
 #define LISP_STREAM_STRING     2
+#define LISP_STREAM_ANY        3
 
 #define LISP_TYPE_INTERNAL      -3
 #define LISP_TYPE_PARSE_ERROR   -2
@@ -41,7 +42,6 @@
 #define LISP_TYPE_BOOLEAN       7
 #define LISP_TYPE_PATTERN_VAR   8
 
-
 #define LISP_PATTERN_ANY        1
 #define LISP_PATTERN_SYMBOL     2
 #define LISP_PATTERN_STRING     3
@@ -50,7 +50,6 @@
 #define LISP_PATTERN_BOOLEAN    6
 #define LISP_PATTERN_LIST       7
 #define LISP_PATTERN_OR         8
-
 
 typedef struct
 {
@@ -64,6 +63,12 @@ typedef struct
 	    char *buf;
 	    int pos;
 	} string;
+        struct
+	{
+	    void *data;
+	    int (*next_char) (void *data);
+	    void (*unget_char) (char c, void *data);
+	} any;
     } v;
 } lisp_stream_t;
 
@@ -95,6 +100,9 @@ struct _lisp_object_t
 
 lisp_stream_t* lisp_stream_init_file (lisp_stream_t *stream, FILE *file);
 lisp_stream_t* lisp_stream_init_string (lisp_stream_t *stream, char *buf);
+lisp_stream_t* lisp_stream_init_any (lisp_stream_t *stream, void *data, 
+				     int (*next_char) (void *data),
+				     void (*unget_char) (char c, void *data));
 
 lisp_object_t* lisp_read (lisp_stream_t *in);
 void lisp_free (lisp_object_t *obj);

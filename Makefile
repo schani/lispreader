@@ -1,6 +1,6 @@
-# $Id: Makefile 184 2000-04-12 22:28:53Z schani $
+# $Id: Makefile 187 2000-07-09 21:08:28Z schani $
 
-VERSION = 0.2
+VERSION = 0.3
 
 all :
 
@@ -9,7 +9,7 @@ dist :
 	mkdir lispreader-$(VERSION)
 	mkdir lispreader-$(VERSION)/doc
 	cp README COPYING NEWS lispreader-$(VERSION)/
-	cp -pr lispreader.[ch] docexample.c lispreader-$(VERSION)/
+	cp -pr lispreader.[ch] docexample.c comment-test.c lispreader-$(VERSION)/
 	cp Makefile.dist lispreader-$(VERSION)/Makefile
 	cp doc/{lispreader,version}.texi lispreader-$(VERSION)/doc/
 	cp doc/Makefile lispreader-$(VERSION)/doc/

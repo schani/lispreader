@@ -296,6 +296,23 @@ Initializes @var{stream} to be a string stream reading from
 of reading from the stream after modifying @var{buf} are undefined.
 @end deftypefun
 
+@deftypefun lisp_stream_t* lisp_stream_init_any (lisp_stream_t* @var{stream}, void* @var{data}, int (*@var{next_char}) (void *data), void (*@var{unget_char}) (char c, void *data))
+Initializes @var{stream} to be a user-defined stream. The function
+@var{next_char} is used to read individual characters from the
+stream. It must return @code{EOF} upon end-of-file and on all
+invocations succeeding the invocation that first returned
+@code{EOF}. @var{unget_char} is called to push back a character for
+reading it again. The character pushed back is always the character
+returned by the last call to @var{next_char}. The next call to
+@var{next_char} must return that character. @var{unget_char} is never
+called twice without at least a call to @var{next_char} in
+between. @var{data} is always passed to @var{next_char} and
+@var{unget_char}. No other action whatsoever is performed on @var{data},
+i.e. should it point to a dynamically allocated memory region, the
+application is responsible for freeing it after the stream has been
+closed.
+@end deftypefun
+
 @deftypefun lisp_object_t* lisp_read (lisp_stream_t* @var{in})
 Reads a Lisp expression from the stream @var{in} and returns it. The
 caller is responsible for deallocating its memory using

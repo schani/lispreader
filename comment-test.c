@@ -1,8 +1,8 @@
-/* $Id: comment-test.c 186 2000-06-28 14:15:35Z schani $ */
+/* $Id: comment-test.c 187 2000-07-09 21:08:28Z schani $ */
 /*
- * docexample.c
+ * comment_test.c
  *
- * Copyright (C) 1999 Mark Probst
+ * Copyright (C) 2000 Masatake YAMATO <jet@gyve.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,48 +25,48 @@
 int 
 main (void)
 {
-  char * script = 
-    "; This is comments(1)\n"
-    "\"This is script (1)\"\n"
-    "; This is comments(2)\n" 
-    "\"This is script (2)\"\n"
-    "; This is comments(3)" ;
+    char * script = 
+	"; This is comments(1)\n"
+	"\"This is script (1)\"\n"
+	"; This is comments(2)\n" 
+	"\"This is script (2)\"\n"
+	"; This is comments(3)" ;
     
-  lisp_object_t *obj;
-  lisp_stream_t stream;
+    lisp_object_t *obj;
+    lisp_stream_t stream;
 
-  if (NULL == lisp_stream_init_string(&stream, script))
+    if (NULL == lisp_stream_init_string(&stream, script))
     {
-      fprintf(stderr, "Fail in lisp_stream_init_string\n");
-      return 1;
+	fprintf(stderr, "Fail in lisp_stream_init_string\n");
+	return 1;
     }
 
-  while (1)
+    while (1)
     {
-      int type;
+	int type;
 
-      obj = lisp_read(&stream);
+	obj = lisp_read(&stream);
 
-      type = lisp_type(obj);
+	type = lisp_type(obj);
       
-      if (type == LISP_TYPE_STRING)
+	if (type == LISP_TYPE_STRING)
 	{
-	  fprintf(stderr, "->%s\n", lisp_string(obj));
-	  lisp_free(obj);
+	    fprintf(stderr, "->%s\n", lisp_string(obj));
+	    lisp_free(obj);
 	}
-      else if (type == LISP_TYPE_PARSE_ERROR)
+	else if (type == LISP_TYPE_PARSE_ERROR)
 	{
-	  printf("parse error\n");
-	  lisp_free(obj);
+	    printf("parse error\n");
+	    lisp_free(obj);
 	}
-      else if (type == LISP_TYPE_EOF)
+	else if (type == LISP_TYPE_EOF)
 	{
-	  printf ("eof\n");
-	  lisp_free(obj);
-	  break;
+	    printf ("eof\n");
+	    lisp_free(obj);
+	    break;
 	}
-      else 
-	printf ("wrong type\n");
+	else 
+	    printf ("wrong type\n");
     }
-  return 0;
+    return 0;
 }

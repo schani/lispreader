@@ -1,4 +1,4 @@
-/* $Id: lispreader.c 186 2000-06-28 14:15:35Z schani $ */
+/* $Id: lispreader.c 187 2000-07-09 21:08:28Z schani $ */
 /*
  * lispreader.c
  *
@@ -86,8 +86,10 @@ _next_char (lisp_stream_t *stream)
 
 		return c;
 	    }
-    }
 
+        case LISP_STREAM_ANY:
+	    return stream->v.any.next_char(stream->v.any.data);
+    }
     assert(0);
     return EOF;
 }
@@ -105,6 +107,10 @@ _unget_char (char c, lisp_stream_t *stream)
 	    --stream->v.string.pos;
 	    break;
 
+       case LISP_STREAM_ANY:
+	    stream->v.any.unget_char(c, stream->v.any.data);
+	    break;
+	 
 	default :
 	    assert(0);
     }
@@ -284,6 +290,21 @@ lisp_stream_init_string (lisp_stream_t *stream, char *buf)
     stream->type = LISP_STREAM_STRING;
     stream->v.string.buf = buf;
     stream->v.string.pos = 0;
+
+    return stream;
+}
+
+lisp_stream_t* 
+lisp_stream_init_any (lisp_stream_t *stream, void *data, 
+		      int (*next_char) (void *data),
+		      void (*unget_char) (char c, void *data))
+{
+    assert(next_char != 0 && unget_char != 0);
+    
+    stream->type = LISP_STREAM_ANY;
+    stream->v.any.data = data;
+    stream->v.any.next_char= next_char;
+    stream->v.any.unget_char = unget_char;
 
     return stream;
 }

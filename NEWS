@@ -4,8 +4,10 @@ News
 0.3
 ===
 
-   * Added code for ignoring Lisp style comments (strings starting with
+   * Lisp style comments are ignored (strings starting with
      the semicolon, ended by newline, contributed by Masatake Yamato)
+
+   * Used-defined streams (contributed by Masatake Yamato)
 
 0.2
 ===
