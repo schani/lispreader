@@ -19,10 +19,15 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#include <assert.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <unistd.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
+#include <assert.h>
 
 #include <lispreader.h>
 
@@ -71,20 +76,13 @@ _next_char (lisp_stream_t *stream)
 {
     switch (stream->type)
     {
+	case LISP_STREAM_MMAP_FILE :
+	case LISP_STREAM_STRING :
+	    assert(0);
+	    return EOF;
+
 	case LISP_STREAM_FILE :
 	    return getc(stream->v.file);
-
-	case LISP_STREAM_STRING :
-	    {
-		char c = stream->v.string.buf[stream->v.string.pos];
-
-		if (c == 0)
-		    return EOF;
-
-		++stream->v.string.pos;
-
-		return c;
-	    }
 
         case LISP_STREAM_ANY:
 	    return stream->v.any.next_char(stream->v.any.data);
@@ -98,12 +96,13 @@ _unget_char (char c, lisp_stream_t *stream)
 {
     switch (stream->type)
     {
-	case LISP_STREAM_FILE :
-	    ungetc(c, stream->v.file);
+	case LISP_STREAM_MMAP_FILE :
+	case LISP_STREAM_STRING :
+	    assert(0);
 	    break;
 
-	case LISP_STREAM_STRING :
-	    --stream->v.string.pos;
+	case LISP_STREAM_FILE :
+	    ungetc(c, stream->v.file);
 	    break;
 
        case LISP_STREAM_ANY:
@@ -115,154 +114,31 @@ _unget_char (char c, lisp_stream_t *stream)
     }
 }
 
-static int
-_scan (lisp_stream_t *stream)
-{
-    static char *delims = "\"();";
+#define SCAN_FUNC_NAME _scan_mmap
+#define NEXT_CHAR      (pos == end ? EOF : *pos++)
+#define UNGET_CHAR(c)  (--pos)
+#define RETURN(t)      ({ stream->v.mmap.pos = pos ; return (t); })
 
-    int c;
+#include "lispscan.h"
 
-    _token_clear();
+#undef SCAN_FUNC_NAME
+#undef NEXT_CHAR
+#undef UNGET_CHAR
+#undef RETURN
 
-    do
-    {
-	c = _next_char(stream);
-	if (c == EOF)
-	    return TOKEN_EOF;
-	else if (c == ';')     	 /* comment start */
-	    while (1)
-	    {	
-		c = _next_char(stream);
-		if (c == EOF)		
-		    return TOKEN_EOF;	
-		else if (c == '\n')   	
-		    break;
-	    }
-    } while (isspace(c));
+#define SCAN_FUNC_NAME _scan
+#define NEXT_CHAR      _next_char(stream)
+#define UNGET_CHAR(c)  _unget_char((c), stream)
+#define RETURN(t)      return (t)
 
-    switch (c)
-    {
-	case '(' :
-	    return TOKEN_OPEN_PAREN;
+#include "lispscan.h"
 
-	case ')' :
-	    return TOKEN_CLOSE_PAREN;
+#undef SCAN_FUNC_NAME
+#undef NEXT_CHAR
+#undef UNGET_CHAR
+#undef RETURN
 
-	case '"' :
-	    while (1)
-	    {
-		c = _next_char(stream);
-		if (c == EOF)
-		    return TOKEN_ERROR;
-		if (c == '"')
-		    break;
-		if (c == '\\')
-		{
-		    c = _next_char(stream);
-
-		    switch (c)
-		    {
-			case EOF :
-			    return TOKEN_ERROR;
-			
-			case 'n' :
-			    c = '\n';
-			    break;
-
-			case 't' :
-			    c = '\t';
-			    break;
-		    }
-		}
-
-		_token_append(c);
-	    }
-	    return TOKEN_STRING;
-
-	case '#' :
-	    c = _next_char(stream);
-	    if (c == EOF)
-		return TOKEN_ERROR;
-
-	    switch (c)
-	    {
-		case 't' :
-		    return TOKEN_TRUE;
-
-		case 'f' :
-		    return TOKEN_FALSE;
-
-		case '?' :
-		    c = _next_char(stream);
-		    if (c == EOF)
-			return TOKEN_ERROR;
-
-		    if (c == '(')
-			return TOKEN_PATTERN_OPEN_PAREN;
-		    else
-			return TOKEN_ERROR;
-	    }
-	    return TOKEN_ERROR;
-
-	default :
-	    if (isdigit(c) || c == '-')
-	    {
-		int have_nondigits = 0;
-		int have_digits = 0;
-		int have_floating_point = 0;
-
-		do
-		{
-		    if (isdigit(c))
-		        have_digits = 1;
-		    else if (c == '.')
-		        have_floating_point++;
-		    _token_append(c);
-
-		    c = _next_char(stream);
-
-		    if (c != EOF && !isdigit(c) && !isspace(c) && c != '.' && !strchr(delims, c))
-			have_nondigits = 1;
-		} while (c != EOF && !isspace(c) && !strchr(delims, c));
-
-		if (c != EOF)
-		    _unget_char(c, stream);
-
-		if (have_nondigits || !have_digits || have_floating_point > 1)
-		  return TOKEN_SYMBOL;
-		else if (have_floating_point == 1)
-		  return TOKEN_REAL;
-		else
-		  return TOKEN_INTEGER;
-	    }
-	    else
-	    {
-		if (c == '.')
-		{
-		    c = _next_char(stream);
-		    if (c != EOF && !isspace(c) && !strchr(delims, c))
-			_token_append('.');
-		    else
-		    {
-			_unget_char(c, stream);
-			return TOKEN_DOT;
-		    }
-		}
-		do
-		{
-		    _token_append(c);
-		    c = _next_char(stream);
-		} while (c != EOF && !isspace(c) && !strchr(delims, c));
-		if (c != EOF)
-		    _unget_char(c, stream);
-
-		return TOKEN_SYMBOL;
-	    }
-    }
-
-    assert(0);
-    return TOKEN_ERROR;
-}
+#define SCAN(s)        ((s)->type <= LISP_LAST_MMAPPED_STREAM ? _scan_mmap((s)) : _scan((s)))
 
 static lisp_object_t*
 lisp_object_alloc (allocator_t *allocator, int type)
@@ -272,6 +148,55 @@ lisp_object_alloc (allocator_t *allocator, int type)
     obj->type = type;
 
     return obj;
+}
+
+lisp_stream_t*
+lisp_stream_init_path (lisp_stream_t *stream, const char *path)
+{
+    int fd;
+    struct stat sb;
+    size_t len;
+    void *buf;
+
+    fd = open(path, O_RDONLY, 0);
+
+    if (fd == -1)
+	return 0;
+
+    if (fstat(fd, &sb) == -1)
+    {
+	close(fd);
+	return 0;
+    }
+
+    len = sb.st_size;
+
+    buf = mmap(0, len, PROT_READ, MAP_SHARED, fd, 0);
+
+    if (buf == (void*)-1)
+    {
+	FILE *file = fdopen(fd, "r");
+
+	if (file == 0)
+	{
+	    close(fd);
+
+	    return 0;
+	}
+	else
+	    return lisp_stream_init_file(stream, file);
+    }
+    else
+    {
+	close(fd);
+
+	stream->type = LISP_STREAM_MMAP_FILE;
+	stream->v.mmap.buf = buf;
+	stream->v.mmap.pos = buf;
+	stream->v.mmap.end = buf + len;
+    }
+
+    return stream;
 }
 
 lisp_stream_t*
@@ -287,8 +212,9 @@ lisp_stream_t*
 lisp_stream_init_string (lisp_stream_t *stream, char *buf)
 {
     stream->type = LISP_STREAM_STRING;
-    stream->v.string.buf = buf;
-    stream->v.string.pos = 0;
+    stream->v.mmap.buf = buf;
+    stream->v.mmap.end = buf + strlen(buf);
+    stream->v.mmap.pos = buf;
 
     return stream;
 }
@@ -306,6 +232,18 @@ lisp_stream_init_any (lisp_stream_t *stream, void *data,
     stream->v.any.unget_char = unget_char;
 
     return stream;
+}
+
+void
+lisp_stream_free_path  (lisp_stream_t *stream)
+{
+    assert(stream->type == LISP_STREAM_MMAP_FILE
+	   || stream->type == LISP_STREAM_FILE);
+
+    if (stream->type == LISP_STREAM_MMAP_FILE)
+	munmap(stream->v.mmap.buf, stream->v.mmap.end - stream->v.mmap.buf);
+    else
+	fclose(stream->v.file);
 }
 
 lisp_object_t*
@@ -431,7 +369,7 @@ lisp_make_pattern_var_with_allocator (allocator_t *allocator, int type, int inde
 lisp_object_t*
 lisp_read_with_allocator (allocator_t *allocator, lisp_stream_t *in)
 {
-    int token = _scan(in);
+    int token = SCAN(in);
     lisp_object_t *obj = lisp_nil();
 
     if (token == TOKEN_EOF)
@@ -476,7 +414,7 @@ lisp_read_with_allocator (allocator_t *allocator, lisp_stream_t *in)
 			{
 			    last->v.cons.cdr = car;
 
-			    if (_scan(in) != TOKEN_CLOSE_PAREN)
+			    if (SCAN(in) != TOKEN_CLOSE_PAREN)
 			    {
 				lisp_free_with_allocator(allocator, obj);
 				return &error_object;

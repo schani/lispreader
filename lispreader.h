@@ -26,9 +26,12 @@
 
 #include <allocator.h>
 
-#define LISP_STREAM_FILE       1
+#define LISP_STREAM_MMAP_FILE  1
 #define LISP_STREAM_STRING     2
-#define LISP_STREAM_ANY        3
+#define LISP_STREAM_FILE       3
+#define LISP_STREAM_ANY        4
+
+#define LISP_LAST_MMAPPED_STREAM   LISP_STREAM_STRING
 
 #define LISP_TYPE_INTERNAL      -3
 #define LISP_TYPE_PARSE_ERROR   -2
@@ -63,8 +66,9 @@ typedef struct
 	struct
 	{
 	    char *buf;
-	    int pos;
-	} string;
+	    char *end;
+	    char *pos;
+	} mmap;
         struct
 	{
 	    void *data;
@@ -100,11 +104,14 @@ struct _lisp_object_t
     } v;
 };
 
+lisp_stream_t* lisp_stream_init_path (lisp_stream_t *stream, const char *path);
 lisp_stream_t* lisp_stream_init_file (lisp_stream_t *stream, FILE *file);
 lisp_stream_t* lisp_stream_init_string (lisp_stream_t *stream, char *buf);
 lisp_stream_t* lisp_stream_init_any (lisp_stream_t *stream, void *data, 
 				     int (*next_char) (void *data),
 				     void (*unget_char) (char c, void *data));
+
+void lisp_stream_free_path  (lisp_stream_t *stream);
 
 lisp_object_t* lisp_read_with_allocator (allocator_t *allocator, lisp_stream_t *in);
 lisp_object_t* lisp_read (lisp_stream_t *in);

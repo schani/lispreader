@@ -20,6 +20,8 @@
  */
 
 #include <stdio.h>
+#include <assert.h>
+
 #include <lispreader.h>
 #include <pools.h>
 
@@ -30,15 +32,43 @@ main (int argc, char *argv[])
     lisp_stream_t stream;
     pools_t pools;
     allocator_t allocator;
+    int do_dump = 1;
+    char *filename = 0;
+
+    assert(argc == 1 || argc == 2 || argc == 3);
+
+    if (argc > 1 && strcmp(argv[1], "--null") == 0)
+    {
+	do_dump = 0;
+	if (argc > 2)
+	    filename = argv[2];
+    }
+    else
+    {
+	assert(argc < 3);
+	if (argc == 2)
+	    filename = argv[1];
+    }
+
+    if (filename == 0)
+    {
+	if (lisp_stream_init_file(&stream, stdin) == 0)
+	{
+	    fprintf(stderr, "could not init file stream\n");
+	    return 1;
+	}
+    }
+    else
+    {
+	if (lisp_stream_init_path(&stream, filename) == 0)
+	{
+	    fprintf(stderr, "could not init path stream\n");
+	    return 1;
+	}
+    }
 
     init_pools(&pools);
     init_pools_allocator(&allocator, &pools);
-
-    if (lisp_stream_init_file(&stream, stdin) == 0)
-    {
-	fprintf(stderr, "could not init stream\n");
-	return 1;
-    }
 
     for (;;)
     {
@@ -55,11 +85,16 @@ main (int argc, char *argv[])
 		return 1;
 
 	    default :
-		if (argc <= 1)
+		if (do_dump)
 		    lisp_dump(obj, stdout);
 	}
     }
 
  done:
+    free_pools(&pools);
+
+    if (filename != 0)
+	lisp_stream_free_path(&stream);
+
     return 0;
 }
