@@ -1,4 +1,4 @@
-lispreader 0.4
+lispreader 0.5
 ==============
 
 lispreader is a small library for reading expressions in Lisp
@@ -23,19 +23,20 @@ texinfo, info and html formats.
 Platforms
 ---------
 
-lispreader has been tested on gnu-linux-alpha and gnu-linux-i386
-systems, but should work on any system with an ANSI-C compliant
+lispreader has been tested on GNU/Linux i386 and MacOS X PPC systems,
+but should work on any system with an ANSI C compliant
 compiler/library pair.
 
 
 Licence and Availability
 ------------------------
 
-lispreader is distributed under the terms of the GPL.
+lispreader is distributed under the terms of the GNU General Public
+Licence.
 
 The source of lispreader is available at the lispreader homepage at
 
-  http://www.complang.tuwien.ac.at/~schani/lispreader/
+  http://www.complang.tuwien.ac.at/schani/lispreader/
 
 
 ---

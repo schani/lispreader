@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
 
 #include <lispreader.h>
 #include <pools.h>

@@ -1,9 +1,9 @@
 /*
  * pools.c
  *
- * MathMap
+ * lispreader
  *
- * Copyright (C) 2002-2004 Mark Probst
+ * Copyright (C) 2002-2005 Mark Probst
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -25,22 +25,30 @@
 
 #include "pools.h"
 
-void
+int
 init_pools (pools_t *pools)
 {
     int i;
 
-    pools->active_pool = -1;
+    pools->active_pool = 0;
     pools->fill_ptr = 0;
 
     for (i = 0; i < NUM_POOLS; ++i)
 	pools->pools[i] = 0;
+
+    pools->pools[0] = (long*)malloc(GRANULARITY * FIRST_POOL_SIZE);
+    if (pools->pools[0] == 0)
+	return 0;
+
+    memset(pools->pools[0], 0, GRANULARITY * FIRST_POOL_SIZE);
+
+    return 1;
 }
 
 void
 reset_pools (pools_t *pools)
 {
-    pools->active_pool = -1;
+    pools->active_pool = 0;
     pools->fill_ptr = 0;
 }
 
@@ -57,37 +65,38 @@ free_pools (pools_t *pools)
     init_pools(pools);
 }
 
+#ifdef __GNUC__
+void*
+_pools_alloc (pools_t *pools, size_t size)
+#else
 void*
 pools_alloc (pools_t *pools, size_t size)
+#endif
 {
     size_t pool_size;
     void *p;
 
-    if (pools->active_pool < 0)
-    {
-	pools->active_pool = 0;
-	if (pools->pools[0] == 0)
-	    pools->pools[0] = (long*)malloc(GRANULARITY * FIRST_POOL_SIZE);
-	pools->fill_ptr = 0;
-
-	memset(pools->pools[0], 0, GRANULARITY * FIRST_POOL_SIZE);
-    }
-
     pool_size = FIRST_POOL_SIZE << pools->active_pool;
     size = (size + GRANULARITY - 1) / GRANULARITY;
 
-    if (pools->fill_ptr + size >= pool_size)
+    while (pools->fill_ptr + size >= pool_size)
     {
 	++pools->active_pool;
 	assert(pools->active_pool < NUM_POOLS);
-	if (pools->pools[pools->active_pool] == 0)
-	    pools->pools[pools->active_pool] = (long*)malloc(GRANULARITY * (FIRST_POOL_SIZE << pools->active_pool));
+
 	pools->fill_ptr = 0;
 
-	memset(pools->pools[pools->active_pool], 0, GRANULARITY * (FIRST_POOL_SIZE << pools->active_pool));
+	if (pools->pools[pools->active_pool] == 0)
+	{
+	    pools->pools[pools->active_pool] = (long*)malloc(GRANULARITY * (FIRST_POOL_SIZE << pools->active_pool));
+	    if (pools->pools[pools->active_pool])
+		return 0;
+	}
     }
 
     assert(pools->fill_ptr + size < pool_size);
+
+    memset(pools->pools[pools->active_pool], 0, GRANULARITY * (FIRST_POOL_SIZE << pools->active_pool));
 
     p = pools->pools[pools->active_pool] + pools->fill_ptr;
     pools->fill_ptr += size;

@@ -1,9 +1,9 @@
 /*
  * pools.h
  *
- * MathMap
+ * lispreader
  *
- * Copyright (C) 2002-2004 Mark Probst
+ * Copyright (C) 2002-2005 Mark Probst
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -37,10 +37,29 @@ typedef struct
     long *pools[NUM_POOLS];
 } pools_t;
 
-void init_pools (pools_t *pools);
+int init_pools (pools_t *pools);
 void reset_pools (pools_t *pools);
 void free_pools (pools_t *pools);
 
+#ifdef __GNUC__
+void* _pools_alloc (pools_t *pools, size_t size);
+
+static inline void*
+pools_alloc (pools_t *pools, size_t size)
+{
+    void *p;
+    size_t padded_size = (size + GRANULARITY - 1) / GRANULARITY;
+
+    if (pools->fill_ptr + padded_size >= (FIRST_POOL_SIZE << pools->active_pool))
+	return _pools_alloc(pools, size);
+
+    p = pools->pools[pools->active_pool] + pools->fill_ptr;
+    pools->fill_ptr += padded_size;
+
+    return p;
+}
+#else
 void* pools_alloc (pools_t *pools, size_t size);
+#endif
 
 #endif

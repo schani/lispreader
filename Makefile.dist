@@ -1,15 +1,17 @@
-# $Id: Makefile.dist 186 2000-06-28 14:15:35Z schani $
+# $Id: Makefile.dist 849 2005-04-02 17:35:44Z schani $
 
 CC=gcc
 CFLAGS=-Wall -g -I.
 
-all : docexample comment-test
+LISPREADER_OBJS = lispreader.o allocator.o pools.o
 
-docexample : docexample.o lispreader.o
-	$(CC) -Wall -g -o docexample lispreader.o docexample.o
+all : docexample
 
-comment-test: comment-test.o lispreader.o
-	$(CC) -Wall -g -o comment-test lispreader.o comment-test.o
+docexample : docexample.o $(LISPREADER_OBJS)
+	$(CC) -Wall -g -o docexample $(LISPREADER_OBJS) docexample.o
+
+#comment-test: comment-test.o $(LISPREADER_OBJS)
+#	$(CC) -Wall -g -o comment-test $(LISPREADER_OBJS) comment-test.o
 
 %.o : %.c
 	$(CC) $(CFLAGS) -c $<

@@ -13,7 +13,7 @@
 @ifinfo
 This file documents the @code{lispreader} library.
 
-Copyright (C) 1998-2000, Mark Probst
+Copyright (C) 1998-2005, Mark Probst
 
 Permission is granted to make and distribute verbatim copies of
 this manual provided the copyright notice and this permission notice
@@ -33,7 +33,7 @@ are preserved on all copies.
 @author Mark Probst (schani@@complang.tuwien.ac.at)
 @page
 @vskip 0pt plus 1filll
-Copyright @copyright{} 1998-2000 Mark Probst
+Copyright @copyright{} 1998-2005 Mark Probst
 
 Permission is granted to make and distribute verbatim copies of
 this manual provided the copyright notice and this permission notice
@@ -47,6 +47,8 @@ are preserved on all copies.
 * Introduction::                
 * Using lispreader::            
 * Syntax::                      
+* Pools::                       
+* Allocators::                  
 * Reference::                   
 * Example::                     
 * Function Index::              
@@ -71,10 +73,10 @@ are preserved on all copies.
 syntax. It has originally been written to facilitate simple exchange of
 structured data between processes but its main purpose is now to provide
 a framework for reading configuration files. To simplify interpretation
-of the read data, @code{lispreader} also provides functions for simple
+of the data read, @code{lispreader} also provides functions for simple
 matching of expressions against patterns.
 
-@code{lispreader} is also used in at least one application to read and
+@code{lispreader} is also used in several application to read and
 write data files. Lisp syntax is very suitable for doing this,
 especially if the data is organized hierachically.
 
@@ -112,18 +114,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 @section Obtaining @code{lispreader}
 
 @code{lispreader} is available for free download on the world-wide-web
-at the URL @url{http://www.complang.tuwien.ac.at/~schani/lispreader/}.
+at the URL @url{http://www.complang.tuwien.ac.at/schani/lispreader/}.
 
 @node Using lispreader, Syntax, Introduction, Top
 @comment  node-name,  next,  previous,  up
 @chapter Using @code{lispreader} in your programs
 
-Since @code{lispreader} only consists of the files @file{lispreader.c}
-and @file{lispreader.h}, which are ANSI-C, it is very easy to
-incorporate it in your own programs: just add these two files to your
-own program's files.
+@code{lispreader} consists of only a few C files, namely
+@file{lispreader.c}, @file{lispreader.h}, @file{lispscan.h},
+@file{allocator.c}, @file{allocator.h}, @file{pools.c}, and
+@file{pools.h}.  To incorporate @code{lispreader} in your own
+programs, just add these files to your own program's files.
 
-@node Syntax, Reference, Using lispreader, Top
+@node Syntax, Pools, Using lispreader, Top
 @comment  node-name,  next,  previous,  up
 @chapter Syntax
 
@@ -261,6 +264,8 @@ Two other patterns have a wider scope:
 @table @code
 @item #?(list)
 Any list.
+@item #?(number)
+Any number, i.e., any integer or real.
 @item #?(any)
 Any expression (including lists).
 @end table
@@ -272,9 +277,123 @@ matches the list @code{(a #t 43)} as well as the list @code{(b 1)}, but
 not the list @code{(b #f)}. As another example, @code{#?(boolean)} is
 equivalent to @code{#?(or #t #f)}.
 
-@node Reference, Example, Syntax, Top
+@node Pools, Allocators, Syntax, Top
+@chapter Pools
+
+@menu
+* Pools Introduction::          
+* Pools Reference::             
+@end menu
+
+@node Pools Introduction, Pools Reference, Pools, Pools
+@section Introduction
+
+Most applications of @code{lispreader} use it to quickly read bits of
+data from a file, process it, and then read the next bit, until the
+end of the file.  If the file is big, it is an advantage if reading is
+fast.  Part of the reading process is allocating memory for the data
+read, so fast memory allocation results in better reading performance.
+
+@code{lispreader} comes with a memory allocator optimized for this
+application pattern, called the ``pools'' allocator.  It is very fast,
+can allocate lots of small chunks of memory with virtually no overhead
+apart from the alignment padding, and can free all allocated memory at
+once.  The downside is that freeing all allocated memory is the only
+way of freeing.
+
+Using pools is not mandatory for using @code{lispreader}, but it
+increases performance significantly (by about a factor of 2) compared
+to the standard malloc allocator.  If you never read files larger than
+a few tens of kilobytes, you will probably never notice, though.
+
+@node Pools Reference,  , Pools Introduction, Pools
+@section Reference
+
+@deftypefun int init_pools (pools_t* @var{pools})
+Initializes the pools data structure pointed to by @var{pools}.  After
+calling this function, the pools can be used to allocate memory via
+@code{pools_alloc}.  Returns non-zero upon success, zero upon failure.
+@end deftypefun
+
+@deftypefun void reset_pools (pools_t* @var{pools})
+Resets the pools pointed to by @var{pools}.  This does not actually
+free the memory allocated from this pools, but reuses it for further
+allocations, i.e., the data previously allocated from it will be
+overwritten.
+@end deftypefun
+
+@deftypefun void free_pools (pools_t* @var{pools})
+Frees all the memory allocated by @var{pools}.
+@end deftypefun
+
+@deftypefun void* pools_alloc (pools_t* @var{pools}, size_t @var{size})
+Allocates a region of memory @var{size} bytes long from the pools
+pointed to by @var{pools}.  Returns a null pointer if the allocation
+failed.
+@end deftypefun
+
+@node Allocators, Reference, Pools, Top
+@chapter Allocators
+
+@menu
+* Allocators Introduction::     
+* Allocators Reference::        
+@end menu
+
+@node Allocators Introduction, Allocators Reference, Allocators, Allocators
+@section Introduction
+
+The @code{allocator_t} data structure is @code{lispreader}'s interface
+to your memory allocator of choice:
+
+@example
+typedef struct
+@{
+    void* (*alloc) (void *allocator_data, size_t size);
+    void (*free) (void *allocator_data, void *chunk);
+    void *allocator_data;
+@} allocator_t;
+@end example
+
+An allocator must provide two functions:
+
+@itemize @bullet
+@item
+@var{alloc} allocates an aligned chunk of memory at least @var{size}
+bytes long.
+
+@item
+@var{free} frees the memory pointed to by @var{chunk}.
+@end itemize
+
+Both functions are always passed the value of @var{allocator_data} as
+their first argument.
+
+All @code{lispreader} functions which allocate or free (non-temporary)
+memory come in two versions: The ``normal'' version uses the standard
+@code{malloc}/@code{free} memory allocation mechanism.  The
+@code{*_with_allocator} version takes a pointer to an
+@code{allocator_t} as its first argument and allocates and frees
+memory via that allocator.
+
+@node Allocators Reference,  , Allocators Introduction, Allocators
+@section Reference
+
+@deftypevr {Global Variable} allocator_t malloc_allocator
+This is an allocator which uses the standard @code{malloc} and
+@code{free} memory allocation functions.
+@end deftypevr
+
+@deftypefun void init_pools_allocator (allocator_t* @var{allocator}, pools_t* @var{pools})
+Initializes the data structure pointed to by @var{allocator} to use
+the pools allocator pointed to by @var{pools}.  Note that the
+@var{free} function for the pools allocator does not free memory, so
+you'll have to free the pools yourself.
+@end deftypefun
+
+@node Reference, Example, Allocators, Top
 @comment  node-name,  next,  previous,  up
-@chapter Reference
+@chapter @code{lispreader} Reference
 
 @menu
 * Reading::                     
@@ -288,6 +407,21 @@ equivalent to @code{#?(or #t #f)}.
 @node Reading, Writing, Reference, Reference
 @comment  node-name,  next,  previous,  up
 @section Reading expressions
+
+@deftypefun lisp_stream_t* lisp_stream_init_path (lisp_stream_t* @var{stream}, const char* @var{path})
+Initializes @var{stream} to be a file stream reading from the file
+with path @var{path}.  Returns a null pointer if the file cannot be
+opened.  The caller is supposed to use the function
+@code{lisp_stream_free_path} to close the file.
+
+This function should be preferred over @code{lisp_stream_init_file}
+because it uses memory mapping if possible, resulting in better
+parsing performance.
+@end deftypefun
+
+@deftypefun void lisp_stream_free_path  (lisp_stream_t* @var{stream})
+Closes the file associated with the file stream @var{stream}.
+@end deftypefun
 
 @deftypefun lisp_stream_t* lisp_stream_init_file (lisp_stream_t* @var{stream}, FILE* @var{file})
 Initializes @var{stream} to be a file stream reading from
@@ -319,17 +453,19 @@ closed.
 @end deftypefun
 
 @deftypefun lisp_object_t* lisp_read (lisp_stream_t* @var{in})
+@deftypefunx lisp_object_t* lisp_read_with_allocator (allocator_t* @var{allocator}, lisp_stream_t* @var{in})
 Reads a Lisp expression from the stream @var{in} and returns it. The
 caller is responsible for deallocating its memory using
-@code{lisp_free}.
+@code{lisp_free}/@code{lisp_free_with_allocator}.
 @end deftypefun
 
 @deftypefun lisp_object_t* lisp_read_from_string (char* @var{buf})
+@deftypefunx lisp_object_t* lisp_read_from_string_with_allocator (allocator_t* @var{allocator}, const char* @var{buf})
 Reads a Lisp expression from the string @var{buf} and returns it. The
 caller is responsible for deallocating its memory using
-@code{lisp_free}. Although @var{buf} may contain more than one
+@code{lisp_free}/@code{lisp_free_with_allocator}. Although @var{buf} may contain more than one
 expression, only the first is read. If you need to read more than one
-expression from a string, use @code{lisp_read} on a string stream
+expression from a string, use @code{lisp_read}/@code{lisp_read_with_allocator} on a string stream
 created by @code{lisp_stream_init_string}.
 @end deftypefun
 
@@ -481,26 +617,32 @@ Returns the empty list.
 @end deftypefun
 
 @deftypefun lisp_object_t* lisp_make_integer (int @var{value})
+@deftypefunx lisp_object_t* lisp_make_integer_with_allocator (allocator_t* @var{allocator}, int @var{value})
 Returns an integer object with the value @var{value}.
 @end deftypefun
 
 @deftypefun lisp_object_t* lisp_make_real (float @var{value})
+@deftypefunx lisp_object_t* lisp_make_real_with_allocator (allocator_t* @var{allocator}, float @var{value})
 Returns a real object with the value @var{value}.
 @end deftypefun
 
 @deftypefun lisp_object_t* lisp_make_symbol (const char* @var{value})
+@deftypefunx lisp_object_t* lisp_make_symbol_with_allocator (allocator_t* @var{allocator}, const char* @var{value})
 Returns a symbol object with the name @var{value}.
 @end deftypefun
 
 @deftypefun lisp_object_t* lisp_make_string (const char* @var{value})
+@deftypefunx lisp_object_t* lisp_make_string_with_allocator (allocator_t* @var{allocator}, const char* @var{value})
 Returns a string object with the value @var{value}.
 @end deftypefun
 
 @deftypefun lisp_object_t* lisp_make_cons (lisp_object_t* @var{car}, lisp_object_t* @var{cdr})
+@deftypefunx lisp_object_t* lisp_make_cons_with_allocator (allocator_t* @var{allocator}, lisp_object_t* @var{car}, lisp_object_t* @var{cdr})
 Returns a cons object with car @var{car} and cdr @var{cdr}.
 @end deftypefun
 
 @deftypefun lisp_object_t* lisp_make_boolean (int @var{value})
+@deftypefunx lisp_object_t* lisp_make_boolean_with_allocator (allocator_t* @var{allocator}, int @var{value})
 Returns a boolean. Its value is false if @var{value} is @code{0}, true otherwise.
 @end deftypefun
 
@@ -556,6 +698,7 @@ otherwise.
 @section Freeing expressions
 
 @deftypefun void lisp_free (lisp_object_t* @var{obj})
+@deftypefunx void lisp_free_with_allocator (allocator_t* @var{allocator}, lisp_object_t* @var{obj})
 Frees all memory occupied by @var{obj}, including all its
 subexpressions.
 @end deftypefun
@@ -589,12 +732,12 @@ main (void)
         type = lisp_type(obj);
         if (type != LISP_TYPE_EOF && type != LISP_TYPE_PARSE_ERROR)
         @{
-            lisp_object_t *vars[6];
+            lisp_object_t *vars[2];
 
-            if (lisp_match_string("(+ #?(or #?(integer) #?(real)) "
-                                     "#?(or #?(integer) #?(real)))",
+            if (lisp_match_string("(+ #?(number) #?(number))",
+                                  obj, vars))
                 printf("%f\n", lisp_real(vars[0])
-                               + lisp_real(vars[3]));
+                               + lisp_real(vars[1]));
 
         @}
         else if (type == LISP_TYPE_PARSE_ERROR)
