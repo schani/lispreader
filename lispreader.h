@@ -1,8 +1,7 @@
-/* $Id: lispreader.h 191 2004-07-02 21:20:49Z schani $ */
 /*
  * lispreader.h
  *
- * Copyright (C) 1998-2000 Mark Probst
+ * Copyright (C) 1998-2004 Mark Probst
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,6 +23,8 @@
 #define __LISPREADER_H__
 
 #include <stdio.h>
+
+#include <allocator.h>
 
 #define LISP_STREAM_FILE       1
 #define LISP_STREAM_STRING     2
@@ -105,9 +106,13 @@ lisp_stream_t* lisp_stream_init_any (lisp_stream_t *stream, void *data,
 				     int (*next_char) (void *data),
 				     void (*unget_char) (char c, void *data));
 
+lisp_object_t* lisp_read_with_allocator (allocator_t *allocator, lisp_stream_t *in);
 lisp_object_t* lisp_read (lisp_stream_t *in);
+
+void lisp_free_with_allocator (allocator_t *allocator, lisp_object_t *obj);
 void lisp_free (lisp_object_t *obj);
 
+lisp_object_t* lisp_read_from_string_with_allocator (allocator_t *allocator, const char *buf);
 lisp_object_t* lisp_read_from_string (const char *buf);
 
 int lisp_compile_pattern (lisp_object_t **obj, int *num_subs);
@@ -124,6 +129,13 @@ lisp_object_t* lisp_car (lisp_object_t *obj);
 lisp_object_t* lisp_cdr (lisp_object_t *obj);
 
 lisp_object_t* lisp_cxr (lisp_object_t *obj, const char *x);
+
+lisp_object_t* lisp_make_integer_with_allocator (allocator_t *allocator, int value);
+lisp_object_t* lisp_make_real_with_allocator (allocator_t *allocator, float value);
+lisp_object_t* lisp_make_symbol_with_allocator (allocator_t *allocator, const char *value);
+lisp_object_t* lisp_make_string_with_allocator (allocator_t *allocator, const char *value);
+lisp_object_t* lisp_make_cons_with_allocator (allocator_t *allocator, lisp_object_t *car, lisp_object_t *cdr);
+lisp_object_t* lisp_make_boolean_with_allocator (allocator_t *allocator, int value);
 
 lisp_object_t* lisp_make_integer (int value);
 lisp_object_t* lisp_make_real (float value);

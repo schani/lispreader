@@ -1,4 +1,3 @@
-/* $Id: lispreader.c 191 2004-07-02 21:20:49Z schani $ */
 /*
  * lispreader.c
  *
@@ -266,9 +265,9 @@ _scan (lisp_stream_t *stream)
 }
 
 static lisp_object_t*
-lisp_object_alloc (int type)
+lisp_object_alloc (allocator_t *allocator, int type)
 {
-    lisp_object_t *obj = (lisp_object_t*)malloc(sizeof(lisp_object_t));
+    lisp_object_t *obj = (lisp_object_t*)allocator_alloc(allocator, sizeof(lisp_object_t));
 
     obj->type = type;
 
@@ -310,9 +309,9 @@ lisp_stream_init_any (lisp_stream_t *stream, void *data,
 }
 
 lisp_object_t*
-lisp_make_integer (int value)
+lisp_make_integer_with_allocator (allocator_t *allocator, int value)
 {
-    lisp_object_t *obj = lisp_object_alloc(LISP_TYPE_INTEGER);
+    lisp_object_t *obj = lisp_object_alloc(allocator, LISP_TYPE_INTEGER);
 
     obj->v.integer = value;
 
@@ -320,9 +319,9 @@ lisp_make_integer (int value)
 }
 
 lisp_object_t*
-lisp_make_real (float value)
+lisp_make_real_with_allocator (allocator_t *allocator, float value)
 {
-    lisp_object_t *obj = lisp_object_alloc(LISP_TYPE_REAL);
+    lisp_object_t *obj = lisp_object_alloc(allocator, LISP_TYPE_REAL);
 
     obj->v.real = value;
 
@@ -330,9 +329,9 @@ lisp_make_real (float value)
 }
 
 lisp_object_t*
-lisp_make_symbol (const char *value)
+lisp_make_symbol_with_allocator (allocator_t *allocator, const char *value)
 {
-    lisp_object_t *obj = lisp_object_alloc(LISP_TYPE_SYMBOL);
+    lisp_object_t *obj = lisp_object_alloc(allocator, LISP_TYPE_SYMBOL);
 
     obj->v.string = strdup(value);
 
@@ -340,9 +339,9 @@ lisp_make_symbol (const char *value)
 }
 
 lisp_object_t*
-lisp_make_string (const char *value)
+lisp_make_string_with_allocator (allocator_t *allocator, const char *value)
 {
-    lisp_object_t *obj = lisp_object_alloc(LISP_TYPE_STRING);
+    lisp_object_t *obj = lisp_object_alloc(allocator, LISP_TYPE_STRING);
 
     obj->v.string = strdup(value);
 
@@ -350,9 +349,9 @@ lisp_make_string (const char *value)
 }
 
 lisp_object_t*
-lisp_make_cons (lisp_object_t *car, lisp_object_t *cdr)
+lisp_make_cons_with_allocator (allocator_t *allocator, lisp_object_t *car, lisp_object_t *cdr)
 {
-    lisp_object_t *obj = lisp_object_alloc(LISP_TYPE_CONS);
+    lisp_object_t *obj = lisp_object_alloc(allocator, LISP_TYPE_CONS);
 
     obj->v.cons.car = car;
     obj->v.cons.cdr = cdr;
@@ -361,19 +360,55 @@ lisp_make_cons (lisp_object_t *car, lisp_object_t *cdr)
 }
 
 lisp_object_t*
-lisp_make_boolean (int value)
+lisp_make_boolean_with_allocator (allocator_t *allocator, int value)
 {
-    lisp_object_t *obj = lisp_object_alloc(LISP_TYPE_BOOLEAN);
+    lisp_object_t *obj = lisp_object_alloc(allocator, LISP_TYPE_BOOLEAN);
 
     obj->v.integer = value ? 1 : 0;
 
     return obj;
 }
 
-static lisp_object_t*
-lisp_make_pattern_cons (lisp_object_t *car, lisp_object_t *cdr)
+lisp_object_t*
+lisp_make_integer (int value)
 {
-    lisp_object_t *obj = lisp_object_alloc(LISP_TYPE_PATTERN_CONS);
+    return lisp_make_integer_with_allocator(&malloc_allocator, value);
+}
+
+lisp_object_t*
+lisp_make_real (float value)
+{
+    return lisp_make_real_with_allocator(&malloc_allocator, value);
+}
+
+lisp_object_t*
+lisp_make_symbol (const char *value)
+{
+    return lisp_make_symbol_with_allocator(&malloc_allocator, value);
+}
+
+lisp_object_t*
+lisp_make_string (const char *value)
+{
+    return lisp_make_string_with_allocator(&malloc_allocator, value);
+}
+
+lisp_object_t*
+lisp_make_cons (lisp_object_t *car, lisp_object_t *cdr)
+{
+    return lisp_make_cons_with_allocator(&malloc_allocator, car, cdr);
+}
+
+lisp_object_t*
+lisp_make_boolean (int value)
+{
+    return lisp_make_boolean_with_allocator(&malloc_allocator, value);
+}
+
+static lisp_object_t*
+lisp_make_pattern_cons_with_allocator (allocator_t *allocator, lisp_object_t *car, lisp_object_t *cdr)
+{
+    lisp_object_t *obj = lisp_object_alloc(allocator, LISP_TYPE_PATTERN_CONS);
 
     obj->v.cons.car = car;
     obj->v.cons.cdr = cdr;
@@ -382,9 +417,9 @@ lisp_make_pattern_cons (lisp_object_t *car, lisp_object_t *cdr)
 }
 
 static lisp_object_t*
-lisp_make_pattern_var (int type, int index, lisp_object_t *sub)
+lisp_make_pattern_var_with_allocator (allocator_t *allocator, int type, int index, lisp_object_t *sub)
 {
-    lisp_object_t *obj = lisp_object_alloc(LISP_TYPE_PATTERN_VAR);
+    lisp_object_t *obj = lisp_object_alloc(allocator, LISP_TYPE_PATTERN_VAR);
 
     obj->v.pattern.type = type;
     obj->v.pattern.index = index;
@@ -394,7 +429,7 @@ lisp_make_pattern_var (int type, int index, lisp_object_t *sub)
 }
 
 lisp_object_t*
-lisp_read (lisp_stream_t *in)
+lisp_read_with_allocator (allocator_t *allocator, lisp_stream_t *in)
 {
     int token = _scan(in);
     lisp_object_t *obj = lisp_nil();
@@ -417,24 +452,24 @@ lisp_read (lisp_stream_t *in)
 
 		do
 		{
-		    car = lisp_read(in);
+		    car = lisp_read_with_allocator(allocator, in);
 		    if (car == &error_object || car == &end_marker)
 		    {
-			lisp_free(obj);
+			lisp_free_with_allocator(allocator, obj);
 			return &error_object;
 		    }
 		    else if (car == &dot_marker)
 		    {
 			if (lisp_nil_p(last))
 			{
-			    lisp_free(obj);
+			    lisp_free_with_allocator(allocator, obj);
 			    return &error_object;
 			}
 
-			car = lisp_read(in);
+			car = lisp_read_with_allocator(allocator, in);
 			if (car == &error_object || car == &end_marker)
 			{
-			    lisp_free(obj);
+			    lisp_free_with_allocator(allocator, obj);
 			    return car;
 			}
 			else
@@ -443,7 +478,7 @@ lisp_read (lisp_stream_t *in)
 
 			    if (_scan(in) != TOKEN_CLOSE_PAREN)
 			    {
-				lisp_free(obj);
+				lisp_free_with_allocator(allocator, obj);
 				return &error_object;
 			    }
 
@@ -453,9 +488,11 @@ lisp_read (lisp_stream_t *in)
 		    else if (car != &close_paren_marker)
 		    {
 			if (lisp_nil_p(last))
-			    obj = last = (token == TOKEN_OPEN_PAREN ? lisp_make_cons(car, lisp_nil()) : lisp_make_pattern_cons(car, lisp_nil()));
+			    obj = last = (token == TOKEN_OPEN_PAREN
+					  ? lisp_make_cons_with_allocator(allocator, car, lisp_nil())
+					  : lisp_make_pattern_cons_with_allocator(allocator, car, lisp_nil()));
 			else
-			    last = last->v.cons.cdr = lisp_make_cons(car, lisp_nil());
+			    last = last->v.cons.cdr = lisp_make_cons_with_allocator(allocator, car, lisp_nil());
 		    }
 		} while (car != &close_paren_marker);
 	    }
@@ -465,33 +502,39 @@ lisp_read (lisp_stream_t *in)
 	    return &close_paren_marker;
 
 	case TOKEN_SYMBOL :
-	    return lisp_make_symbol(token_string);
+	    return lisp_make_symbol_with_allocator(allocator, token_string);
 
 	case TOKEN_STRING :
-	    return lisp_make_string(token_string);
+	    return lisp_make_string_with_allocator(allocator, token_string);
 
 	case TOKEN_INTEGER :
-	    return lisp_make_integer(atoi(token_string));
+	    return lisp_make_integer_with_allocator(allocator, atoi(token_string));
 	
         case TOKEN_REAL :
-	    return lisp_make_real((float)atof(token_string));
+	    return lisp_make_real_with_allocator(allocator, (float)atof(token_string));
 
 	case TOKEN_DOT :
 	    return &dot_marker;
 
 	case TOKEN_TRUE :
-	    return lisp_make_boolean(1);
+	    return lisp_make_boolean_with_allocator(allocator, 1);
 
 	case TOKEN_FALSE :
-	    return lisp_make_boolean(0);
+	    return lisp_make_boolean_with_allocator(allocator, 0);
     }
 
     assert(0);
     return &error_object;
 }
 
+lisp_object_t*
+lisp_read (lisp_stream_t *in)
+{
+    return lisp_read_with_allocator(&malloc_allocator, in);
+}
+
 void
-lisp_free (lisp_object_t *obj)
+lisp_free_with_allocator (allocator_t *allocator, lisp_object_t *obj)
 {
  restart:
 
@@ -507,7 +550,7 @@ lisp_free (lisp_object_t *obj)
 
 	case LISP_TYPE_SYMBOL :
 	case LISP_TYPE_STRING :
-	    free(obj->v.string);
+	    allocator_free(allocator, obj->v.string);
 	    break;
 
 	case LISP_TYPE_CONS :
@@ -552,31 +595,43 @@ lisp_free (lisp_object_t *obj)
 
 		lisp_object_t *tmp;
 
-		lisp_free(obj->v.cons.car);
+		lisp_free_with_allocator(allocator, obj->v.cons.car);
 
 		tmp = obj;
 		obj = obj->v.cons.cdr;
 
-		free(tmp);
+		allocator_free(allocator, tmp);
 
 		goto restart;
 	    }
 
 	case LISP_TYPE_PATTERN_VAR :
-	    lisp_free(obj->v.pattern.sub);
+	    lisp_free_with_allocator(allocator, obj->v.pattern.sub);
 	    break;
     }
 
-    free(obj);
+    allocator_free(allocator, obj);
+}
+
+void
+lisp_free (lisp_object_t *obj)
+{
+    lisp_free_with_allocator(&malloc_allocator, obj);
+}
+
+lisp_object_t*
+lisp_read_from_string_with_allocator (allocator_t *allocator, const char *buf)
+{
+    lisp_stream_t stream;
+
+    lisp_stream_init_string(&stream, (char*)buf);
+    return lisp_read_with_allocator(allocator, &stream);
 }
 
 lisp_object_t*
 lisp_read_from_string (const char *buf)
 {
-    lisp_stream_t stream;
-
-    lisp_stream_init_string(&stream, (char*)buf);
-    return lisp_read(&stream);
+    return lisp_read_from_string_with_allocator(&malloc_allocator, buf);
 }
 
 static int
@@ -626,7 +681,7 @@ _compile_pattern (lisp_object_t **obj, int *index)
 		if (type != LISP_PATTERN_OR && lisp_cdr(*obj) != 0)
 		    return 0;
 
-		pattern = lisp_make_pattern_var(type, (*index)++, lisp_nil());
+		pattern = lisp_make_pattern_var_with_allocator(&malloc_allocator, type, (*index)++, lisp_nil());
 
 		if (type == LISP_PATTERN_OR)
 		{

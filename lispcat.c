@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * lispcat.c
  *
@@ -22,12 +21,18 @@
 
 #include <stdio.h>
 #include <lispreader.h>
+#include <pools.h>
 
 int 
-main (void)
+main (int argc, char *argv[])
 {
     lisp_object_t *obj;
     lisp_stream_t stream;
+    pools_t pools;
+    allocator_t allocator;
+
+    init_pools(&pools);
+    init_pools_allocator(&allocator, &pools);
 
     if (lisp_stream_init_file(&stream, stdin) == 0)
     {
@@ -37,7 +42,8 @@ main (void)
 
     for (;;)
     {
-	obj = lisp_read(&stream);
+	reset_pools(&pools);
+	obj = lisp_read_with_allocator(&allocator, &stream);
 
 	switch (lisp_type(obj))
 	{
@@ -49,8 +55,8 @@ main (void)
 		return 1;
 
 	    default :
-		lisp_dump(obj, stdout);
-		lisp_free(obj);
+		if (argc <= 1)
+		    lisp_dump(obj, stdout);
 	}
     }
 
