@@ -1,4 +1,15 @@
-# $Id: Makefile 178 1999-11-18 23:02:04Z schani $
+# $Id: Makefile 181 1999-12-21 12:54:22Z schani $
 
-lisptest : lisptest.c lispparse.c lispparse.h Makefile
-	gcc -Wall -g -o lisptest lispparse.c lisptest.c
+CC=gcc
+CFLAGS=-Wall -g -I.
+
+all : docexample
+
+docexample : docexample.o lispreader.o
+	$(CC) -Wall -g -o docexample lispreader.o docexample.o
+
+%.o : %.c
+	$(CC) $(CFLAGS) -c $<
+
+clean :
+	rm -f docexample *.o *~

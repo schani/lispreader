@@ -1,6 +1,6 @@
-/* $Id: lispparse.c 180 1999-12-19 18:49:55Z schani $ */
+/* $Id: lispreader.c 181 1999-12-21 12:54:22Z schani $ */
 /*
- * lispparse.c
+ * lispreader.c
  *
  * Copyright (C) 1998-1999 Mark Probst
  *
@@ -25,13 +25,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "lispparse.h"
+#include <lispreader.h>
 
 #define TOKEN_ERROR                   -1
 #define TOKEN_EOF                     0
 #define TOKEN_OPEN_PAREN              1
 #define TOKEN_CLOSE_PAREN             2
-#define TOKEN_IDENT                   3
+#define TOKEN_SYMBOL                  3
 #define TOKEN_STRING                  4
 #define TOKEN_INTEGER                 5
 #define TOKEN_PATTERN_OPEN_PAREN      6
@@ -184,19 +184,29 @@ _scan (lisp_stream_t *stream)
 		    else
 			return TOKEN_ERROR;
 	    }
-	    return 0;
+	    return TOKEN_ERROR;
 
 	default :
-	    if (isdigit(c))
+	    if (isdigit(c) || c == '-')
 	    {
+		int have_nondigits = 0;
+		int have_digits = 0;
+
 		do
 		{
+		    if (isdigit(c))
+			have_digits = 1;
 		    _token_append(c);
 		    c = _next_char(stream);
-		} while (c != EOF && isdigit(c));
+		    if (c != EOF && !isdigit(c) && !isspace(c) && c != '(' && c != ')' && c != '"')
+			have_nondigits = 1;
+		} while (c != EOF && !isspace(c) && c != '(' && c != ')' && c != '"');
+
 		if (c != EOF)
 		    _unget_char(c, stream);
 
+		if (have_nondigits || !have_digits)
+		    return TOKEN_SYMBOL;
 		return TOKEN_INTEGER;
 	    }
 	    else
@@ -220,7 +230,7 @@ _scan (lisp_stream_t *stream)
 		if (c != EOF)
 		    _unget_char(c, stream);
 
-		return TOKEN_IDENT;
+		return TOKEN_SYMBOL;
 	    }
     }
 
@@ -332,8 +342,8 @@ lisp_read (lisp_stream_t *in)
 	case TOKEN_CLOSE_PAREN :
 	    return &close_paren_marker;
 
-	case TOKEN_IDENT :
-	    obj = lisp_object_alloc(LISP_TYPE_IDENT);
+	case TOKEN_SYMBOL :
+	    obj = lisp_object_alloc(LISP_TYPE_SYMBOL);
 	    obj->v.string = strdup(token_string);
 	    return obj;
 
@@ -378,7 +388,7 @@ lisp_free (lisp_object_t *obj)
 	case LISP_TYPE_EOF :
 	    return;
 
-	case LISP_TYPE_IDENT :
+	case LISP_TYPE_SYMBOL :
 	case LISP_TYPE_STRING :
 	    free(obj->v.string);
 	    break;
@@ -419,7 +429,7 @@ _compile_pattern (lisp_object_t **obj, int *index)
 		struct { char *name; int type; } types[] =
 						 {
 						     { "any", LISP_PATTERN_ANY },
-						     { "ident", LISP_PATTERN_IDENT },
+						     { "symbol", LISP_PATTERN_SYMBOL },
 						     { "string", LISP_PATTERN_STRING },
 						     { "integer", LISP_PATTERN_INTEGER },
 						     { "boolean", LISP_PATTERN_BOOLEAN },
@@ -432,10 +442,10 @@ _compile_pattern (lisp_object_t **obj, int *index)
 		int i;
 		lisp_object_t *pattern;
 
-		if (lisp_type(lisp_car(*obj)) != LISP_TYPE_IDENT)
+		if (lisp_type(lisp_car(*obj)) != LISP_TYPE_SYMBOL)
 		    return 0;
 
-		type_name = lisp_ident(lisp_car(*obj));
+		type_name = lisp_symbol(lisp_car(*obj));
 		for (i = 0; types[i].name != 0; ++i)
 		{
 		    if (strcmp(types[i].name, type_name) == 0)
@@ -489,28 +499,33 @@ _compile_pattern (lisp_object_t **obj, int *index)
 }
 
 int
-lisp_compile_pattern (lisp_object_t **obj)
+lisp_compile_pattern (lisp_object_t **obj, int *num_subs)
 {
     int index = 0;
+    int result;
 
-    return _compile_pattern(obj, &index);
+    result = _compile_pattern(obj, &index);
+
+    if (result && num_subs != 0)
+	*num_subs = index;
+
+    return result;
 }
 
+static int _match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **vars);
+
 static int
-_match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **vars)
+_match_pattern_var (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **vars)
 {
     assert(lisp_type(pattern) == LISP_TYPE_PATTERN_VAR);
-
-    if (vars != 0)
-	vars[pattern->v.pattern.index] = &error_object;
 
     switch (pattern->v.pattern.type)
     {
 	case LISP_PATTERN_ANY :
 	    break;
 
-	case LISP_PATTERN_IDENT :
-	    if (obj == 0 || lisp_type(obj) != LISP_TYPE_IDENT)
+	case LISP_PATTERN_SYMBOL :
+	    if (obj == 0 || lisp_type(obj) != LISP_TYPE_SYMBOL)
 		return 0;
 	    break;
 
@@ -543,7 +558,7 @@ _match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **vars
 		{
 		    assert(lisp_type(sub) == LISP_TYPE_CONS);
 
-		    if (lisp_match_pattern(lisp_car(sub), obj, vars))
+		    if (_match_pattern(lisp_car(sub), obj, vars))
 			matched = 1;
 		}
 
@@ -562,8 +577,8 @@ _match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **vars
     return 1;
 }
 
-int
-lisp_match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **vars)
+static int
+_match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **vars)
 {
     if (pattern == 0)
 	return obj == 0;
@@ -572,15 +587,15 @@ lisp_match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **
 	return 0;
 
     if (lisp_type(pattern) == LISP_TYPE_PATTERN_VAR)
-	return _match_pattern(pattern, obj, vars);
+	return _match_pattern_var(pattern, obj, vars);
 
     if (lisp_type(pattern) != lisp_type(obj))
 	return 0;
 
     switch (lisp_type(pattern))
     {
-	case LISP_TYPE_IDENT :
-	    return strcmp(lisp_ident(pattern), lisp_ident(obj)) == 0;
+	case LISP_TYPE_SYMBOL :
+	    return strcmp(lisp_symbol(pattern), lisp_symbol(obj)) == 0;
 
 	case LISP_TYPE_STRING :
 	    return strcmp(lisp_string(pattern), lisp_string(obj)) == 0;
@@ -592,8 +607,8 @@ lisp_match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **
 	    {
 		int result1, result2;
 
-		result1 = lisp_match_pattern(lisp_car(pattern), lisp_car(obj), vars);
-		result2 = lisp_match_pattern(lisp_cdr(pattern), lisp_cdr(obj), vars);
+		result1 = _match_pattern(lisp_car(pattern), lisp_car(obj), vars);
+		result2 = _match_pattern(lisp_cdr(pattern), lisp_cdr(obj), vars);
 
 		return result1 && result2;
 	    }
@@ -607,10 +622,23 @@ lisp_match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **
 }
 
 int
+lisp_match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **vars, int num_subs)
+{
+    int i;
+
+    if (vars != 0)
+	for (i = 0; i < num_subs; ++i)
+	    vars[i] = &error_object;
+
+    return _match_pattern(pattern, obj, vars);
+}
+
+int
 lisp_match_string (char *pattern_string, lisp_object_t *obj, lisp_object_t **vars)
 {
     lisp_object_t *pattern;
     int result;
+    int num_subs;
 
     pattern = lisp_read_from_string(pattern_string);
 
@@ -618,13 +646,13 @@ lisp_match_string (char *pattern_string, lisp_object_t *obj, lisp_object_t **var
 			 || lisp_type(pattern) == LISP_TYPE_PARSE_ERROR))
 	return 0;
 
-    if (!lisp_compile_pattern(&pattern))
+    if (!lisp_compile_pattern(&pattern, &num_subs))
     {
 	lisp_free(pattern);
 	return 0;
     }
 
-    result = lisp_match_pattern(pattern, obj, vars);
+    result = lisp_match_pattern(pattern, obj, vars, num_subs);
 
     lisp_free(pattern);
 
@@ -634,6 +662,8 @@ lisp_match_string (char *pattern_string, lisp_object_t *obj, lisp_object_t **var
 int
 lisp_type (lisp_object_t *obj)
 {
+    if (obj == 0)
+	return LISP_TYPE_NIL;
     return obj->type;
 }
 
@@ -646,9 +676,9 @@ lisp_integer (lisp_object_t *obj)
 }
 
 char*
-lisp_ident (lisp_object_t *obj)
+lisp_symbol (lisp_object_t *obj)
 {
-    assert(obj->type == LISP_TYPE_IDENT);
+    assert(obj->type == LISP_TYPE_SYMBOL);
 
     return obj->v.string;
 }
@@ -741,8 +771,8 @@ lisp_dump (lisp_object_t *obj, FILE *out)
 	    fprintf(out, "%d", lisp_integer(obj));
 	    break;
 
-	case LISP_TYPE_IDENT :
-	    fputs(lisp_ident(obj), out);
+	case LISP_TYPE_SYMBOL :
+	    fputs(lisp_symbol(obj), out);
 	    break;
 
 	case LISP_TYPE_STRING :

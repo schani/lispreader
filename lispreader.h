@@ -1,8 +1,8 @@
-/* $Id: lispparse.h 180 1999-12-19 18:49:55Z schani $ */
+/* $Id: lispreader.h 181 1999-12-21 12:54:22Z schani $ */
 /*
- * lispparse.h
+ * lispreader.h
  *
- * Copyright (C) 1998 Mark Probst
+ * Copyright (C) 1998-1999 Mark Probst
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,8 +20,8 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef __LISPPARSE_H__
-#define __LISPPARSE_H__
+#ifndef __LISPREADER_H__
+#define __LISPREADER_H__
 
 #include <stdio.h>
 
@@ -31,7 +31,8 @@
 #define LISP_TYPE_INTERNAL      -3
 #define LISP_TYPE_PARSE_ERROR   -2
 #define LISP_TYPE_EOF           -1
-#define LISP_TYPE_IDENT         1
+#define LISP_TYPE_NIL           0
+#define LISP_TYPE_SYMBOL        1
 #define LISP_TYPE_INTEGER       2
 #define LISP_TYPE_STRING        3
 #define LISP_TYPE_CONS          4
@@ -40,7 +41,7 @@
 #define LISP_TYPE_PATTERN_VAR   7
 
 #define LISP_PATTERN_ANY        1
-#define LISP_PATTERN_IDENT      2
+#define LISP_PATTERN_SYMBOL     2
 #define LISP_PATTERN_STRING     3
 #define LISP_PATTERN_INTEGER    4
 #define LISP_PATTERN_BOOLEAN    5
@@ -61,7 +62,6 @@ typedef struct
 	} string;
     } v;
 } lisp_stream_t;
-
 
 typedef struct _lisp_object_t lisp_object_t;
 struct _lisp_object_t
@@ -96,13 +96,13 @@ void lisp_free (lisp_object_t *obj);
 
 lisp_object_t* lisp_read_from_string (char *buf);
 
-int lisp_compile_pattern (lisp_object_t **obj);
-int lisp_match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **vars);
+int lisp_compile_pattern (lisp_object_t **obj, int *num_subs);
+int lisp_match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **vars, int num_subs);
 int lisp_match_string (char *pattern_string, lisp_object_t *obj, lisp_object_t **vars);
 
 int lisp_type (lisp_object_t *obj);
 int lisp_integer (lisp_object_t *obj);
-char* lisp_ident (lisp_object_t *obj);
+char* lisp_symbol (lisp_object_t *obj);
 char* lisp_string (lisp_object_t *obj);
 int lisp_boolean (lisp_object_t *obj);
 lisp_object_t* lisp_car (lisp_object_t *obj);
