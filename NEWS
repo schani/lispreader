@@ -1,0 +1,11 @@
+News
+****
+
+0.2
+===
+
+   * Added code for handling real numbers (contributed by Masatake
+     Yamato)
+
+   * The string arguments to lisp_read_from_string and
+     lisp_match_string are now const

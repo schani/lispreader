@@ -1,8 +1,8 @@
-/* $Id: lispreader.h 181 1999-12-21 12:54:22Z schani $ */
+/* $Id: lispreader.h 184 2000-04-12 22:28:53Z schani $ */
 /*
  * lispreader.h
  *
- * Copyright (C) 1998-1999 Mark Probst
+ * Copyright (C) 1998-2000 Mark Probst
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -35,18 +35,22 @@
 #define LISP_TYPE_SYMBOL        1
 #define LISP_TYPE_INTEGER       2
 #define LISP_TYPE_STRING        3
-#define LISP_TYPE_CONS          4
-#define LISP_TYPE_PATTERN_CONS  5
-#define LISP_TYPE_BOOLEAN       6
-#define LISP_TYPE_PATTERN_VAR   7
+#define LISP_TYPE_REAL          4
+#define LISP_TYPE_CONS          5
+#define LISP_TYPE_PATTERN_CONS  6
+#define LISP_TYPE_BOOLEAN       7
+#define LISP_TYPE_PATTERN_VAR   8
+
 
 #define LISP_PATTERN_ANY        1
 #define LISP_PATTERN_SYMBOL     2
 #define LISP_PATTERN_STRING     3
 #define LISP_PATTERN_INTEGER    4
-#define LISP_PATTERN_BOOLEAN    5
-#define LISP_PATTERN_LIST       6
-#define LISP_PATTERN_OR         7
+#define LISP_PATTERN_REAL       5
+#define LISP_PATTERN_BOOLEAN    6
+#define LISP_PATTERN_LIST       7
+#define LISP_PATTERN_OR         8
+
 
 typedef struct
 {
@@ -78,6 +82,7 @@ struct _lisp_object_t
 
 	char *string;
 	int integer;
+	float real;
 
 	struct
 	{
@@ -94,14 +99,15 @@ lisp_stream_t* lisp_stream_init_string (lisp_stream_t *stream, char *buf);
 lisp_object_t* lisp_read (lisp_stream_t *in);
 void lisp_free (lisp_object_t *obj);
 
-lisp_object_t* lisp_read_from_string (char *buf);
+lisp_object_t* lisp_read_from_string (const char *buf);
 
 int lisp_compile_pattern (lisp_object_t **obj, int *num_subs);
 int lisp_match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **vars, int num_subs);
-int lisp_match_string (char *pattern_string, lisp_object_t *obj, lisp_object_t **vars);
+int lisp_match_string (const char *pattern_string, lisp_object_t *obj, lisp_object_t **vars);
 
 int lisp_type (lisp_object_t *obj);
 int lisp_integer (lisp_object_t *obj);
+float lisp_real (lisp_object_t *obj);
 char* lisp_symbol (lisp_object_t *obj);
 char* lisp_string (lisp_object_t *obj);
 int lisp_boolean (lisp_object_t *obj);

@@ -1,8 +1,8 @@
-/* $Id: lispreader.c 181 1999-12-21 12:54:22Z schani $ */
+/* $Id: lispreader.c 184 2000-04-12 22:28:53Z schani $ */
 /*
  * lispreader.c
  *
- * Copyright (C) 1998-1999 Mark Probst
+ * Copyright (C) 1998-2000 Mark Probst
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -34,10 +34,12 @@
 #define TOKEN_SYMBOL                  3
 #define TOKEN_STRING                  4
 #define TOKEN_INTEGER                 5
-#define TOKEN_PATTERN_OPEN_PAREN      6
-#define TOKEN_DOT                     7
-#define TOKEN_TRUE                    8
-#define TOKEN_FALSE                   9
+#define TOKEN_REAL                    6
+#define TOKEN_PATTERN_OPEN_PAREN      7
+#define TOKEN_DOT                     8
+#define TOKEN_TRUE                    9
+#define TOKEN_FALSE                   10
+
 
 #define MAX_TOKEN_LENGTH           1024
 
@@ -191,23 +193,37 @@ _scan (lisp_stream_t *stream)
 	    {
 		int have_nondigits = 0;
 		int have_digits = 0;
+		int have_floating_point = 0;
 
 		do
 		{
 		    if (isdigit(c))
-			have_digits = 1;
+		        have_digits = 1;
+		    else if (c == '.')
+		        have_floating_point++;
 		    _token_append(c);
+
 		    c = _next_char(stream);
-		    if (c != EOF && !isdigit(c) && !isspace(c) && c != '(' && c != ')' && c != '"')
-			have_nondigits = 1;
+
+		    if (c != EOF 
+			&& !isdigit(c) 
+			&& !isspace(c) 
+			&& c != '(' 
+			&& c != ')' 
+			&& c != '"'
+			&& c != '.')
+		      have_nondigits = 1;
 		} while (c != EOF && !isspace(c) && c != '(' && c != ')' && c != '"');
 
 		if (c != EOF)
 		    _unget_char(c, stream);
 
-		if (have_nondigits || !have_digits)
-		    return TOKEN_SYMBOL;
-		return TOKEN_INTEGER;
+		if (have_nondigits || !have_digits || have_floating_point > 1)
+		  return TOKEN_SYMBOL;
+		else if (have_floating_point == 1)
+		  return TOKEN_REAL;
+		else
+		  return TOKEN_INTEGER;
 	    }
 	    else
 	    {
@@ -356,6 +372,11 @@ lisp_read (lisp_stream_t *in)
 	    obj = lisp_object_alloc(LISP_TYPE_INTEGER);
 	    obj->v.integer = atoi(token_string);
 	    return obj;
+	
+        case TOKEN_REAL :
+	    obj = lisp_object_alloc(LISP_TYPE_REAL);
+	    obj->v.real = (float)atof(token_string);
+	    return obj;
 
 	case TOKEN_DOT :
 	    return &dot_marker;
@@ -408,11 +429,11 @@ lisp_free (lisp_object_t *obj)
 }
 
 lisp_object_t*
-lisp_read_from_string (char *buf)
+lisp_read_from_string (const char *buf)
 {
     lisp_stream_t stream;
 
-    lisp_stream_init_string(&stream, buf);
+    lisp_stream_init_string(&stream, (char*)buf);
     return lisp_read(&stream);
 }
 
@@ -432,6 +453,7 @@ _compile_pattern (lisp_object_t **obj, int *index)
 						     { "symbol", LISP_PATTERN_SYMBOL },
 						     { "string", LISP_PATTERN_STRING },
 						     { "integer", LISP_PATTERN_INTEGER },
+						     { "real", LISP_PATTERN_REAL },
 						     { "boolean", LISP_PATTERN_BOOLEAN },
 						     { "list", LISP_PATTERN_LIST },
 						     { "or", LISP_PATTERN_OR },
@@ -539,6 +561,11 @@ _match_pattern_var (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **
 		return 0;
 	    break;
 
+        case LISP_PATTERN_REAL :
+	    if (obj == 0 || lisp_type(obj) != LISP_TYPE_REAL)
+		return 0;
+	    break;
+	  
 	case LISP_PATTERN_BOOLEAN :
 	    if (obj == 0 || lisp_type(obj) != LISP_TYPE_BOOLEAN)
 		return 0;
@@ -603,6 +630,9 @@ _match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **vars
 	case LISP_TYPE_INTEGER :
 	    return lisp_integer(pattern) == lisp_integer(obj);
 
+        case LISP_TYPE_REAL :
+            return lisp_real(pattern) == lisp_real(obj);
+
 	case LISP_TYPE_CONS :
 	    {
 		int result1, result2;
@@ -634,7 +664,7 @@ lisp_match_pattern (lisp_object_t *pattern, lisp_object_t *obj, lisp_object_t **
 }
 
 int
-lisp_match_string (char *pattern_string, lisp_object_t *obj, lisp_object_t **vars)
+lisp_match_string (const char *pattern_string, lisp_object_t *obj, lisp_object_t **vars)
 {
     lisp_object_t *pattern;
     int result;
@@ -699,6 +729,16 @@ lisp_boolean (lisp_object_t *obj)
     return obj->v.integer;
 }
 
+float
+lisp_real (lisp_object_t *obj)
+{
+    assert(obj->type == LISP_TYPE_REAL || obj->type == LISP_TYPE_INTEGER);
+
+    if (obj->type == LISP_TYPE_INTEGER)
+	return obj->v.integer;
+    return obj->v.real;
+}
+	   
 lisp_object_t*
 lisp_car (lisp_object_t *obj)
 {
@@ -769,6 +809,10 @@ lisp_dump (lisp_object_t *obj, FILE *out)
 
 	case LISP_TYPE_INTEGER :
 	    fprintf(out, "%d", lisp_integer(obj));
+	    break;
+
+        case LISP_TYPE_REAL :
+	    fprintf(out, "%f", lisp_real(obj));
 	    break;
 
 	case LISP_TYPE_SYMBOL :

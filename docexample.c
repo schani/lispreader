@@ -1,4 +1,4 @@
-/* $Id: docexample.c 182 1999-12-21 16:55:25Z schani $ */
+/* $Id: docexample.c 184 2000-04-12 22:28:53Z schani $ */
 /*
  * docexample.c
  *
@@ -40,11 +40,11 @@ main (void)
         {
             lisp_object_t *vars[2];
 
-            if (lisp_match_string("(+ #?(integer) #?(integer))",
+            if (lisp_match_string("(+ #?(or #?(integer) #?(real)) "
+                                     "#?(or #?(integer) #?(real)))",
                                   obj, vars))
-                printf("%d\n", lisp_integer(vars[0])
-                               + lisp_integer(vars[1]));
-
+                printf("%f\n", lisp_real(vars[0])
+                               + lisp_real(vars[3]));
         }
         else if (type == LISP_TYPE_PARSE_ERROR)
             printf("parse error\n");

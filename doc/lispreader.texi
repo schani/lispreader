@@ -13,7 +13,7 @@
 @ifinfo
 This file documents the @code{lispreader} library.
 
-Copyright (C) 1998-1999, Mark Probst
+Copyright (C) 1998-2000, Mark Probst
 
 Permission is granted to make and distribute verbatim copies of
 this manual provided the copyright notice and this permission notice
@@ -33,14 +33,26 @@ are preserved on all copies.
 @author Mark Probst (schani@@complang.tuwien.ac.at)
 @page
 @vskip 0pt plus 1filll
-Copyright @copyright{} 1998-1999 Mark Probst
+Copyright @copyright{} 1998-2000 Mark Probst
 
 Permission is granted to make and distribute verbatim copies of
 this manual provided the copyright notice and this permission notice
 are preserved on all copies.
 @end titlepage
 
-@node Introduction, Using lispreader, (dir), (dir)
+@node  Top, Introduction, (dir), (dir)
+@comment  node-name,  next,  previous,  up@node Top, , (dir), (dir)
+
+@menu
+* Introduction::                
+* Using lispreader::            
+* Syntax::                      
+* Reference::                   
+* Example::                     
+* Function Index::              
+@end menu
+
+@node Introduction, Using lispreader, Top, Top
 @comment  node-name,  next,  previous,  up
 @chapter Introduction
 
@@ -98,7 +110,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 @code{lispreader} is available for free download on the world-wide-web
 at the URL @url{http://www.complang.tuwien.ac.at/~schani/lispreader/}.
 
-@node Using lispreader, Syntax, Introduction, (dir)
+@node Using lispreader, Syntax, Introduction, Top
 @comment  node-name,  next,  previous,  up
 @chapter Using @code{lispreader} in your programs
 
@@ -107,18 +119,19 @@ and @file{lispreader.h}, which are ANSI-C, it is very easy to
 incorporate it in your own programs: just add these two files to your
 own program's files.
 
-@node Syntax, Reference, Using lispreader, (dir)
+@node Syntax, Reference, Using lispreader, Top
 @comment  node-name,  next,  previous,  up
 @chapter Syntax
 
 @code{lispreader} can read lists consisting of other lists, symbols,
-strings, integers and booleans. It also provides a syntax for specifying
-patterns.
+strings, integers, real numbers and booleans. It also provides a syntax
+for specifying patterns.
 
 @menu
 * Lists::                       
 * Symbols::                     
 * Integers::                    
+* Reals::                       
 * Strings::                     
 * Booleans::                    
 * Patterns::                    
@@ -170,7 +183,7 @@ dot-notation as @code{(a . (b . (c . ())))}.
 Symbols are pretty much everything that cannot be interpreted as
 anything else. They can have arbitrary length.
 
-@node Integers, Strings, Symbols, Syntax
+@node Integers, Reals, Symbols, Syntax
 @comment  node-name,  next,  previous,  up
 @section Integers
 
@@ -178,7 +191,15 @@ As integers are internally represented by @code{int} values, their range
 is restricted to the range of the @code{int} data type. Bignums are not
 supported.
 
-@node Strings, Booleans, Integers, Syntax
+@node Reals, Strings, Integers, Syntax
+@comment  node-name,  next,  previous,  up
+@section Reals
+
+Reals are internally represented by values of the @code{float}
+datatype. @code{lispreader} cannot yet interpret exponential notation or
+reals without digits before the dot.
+
+@node Strings, Booleans, Reals, Syntax
 @comment  node-name,  next,  previous,  up
 @section Strings
 
@@ -213,6 +234,8 @@ Any symbol.
 Any string.
 @item #?(integer)
 Any integer.
+@item #?(real)
+Any real.
 @item #?(boolean)
 @code{#t} of @code{#f}.
 @end table
@@ -233,7 +256,7 @@ matches the list @code{(a #t 43)} as well as the list @code{(b 1)}, but
 not the list @code{(b #f)}. As another example, @code{#?(boolean)} is
 equivalent to @code{#?(or #t #f)}.
 
-@node Reference, Example, Syntax, (dir)
+@node Reference, Example, Syntax, Top
 @comment  node-name,  next,  previous,  up
 @chapter Reference
 
@@ -293,10 +316,6 @@ by @code{lisp_read}, to @var{out}.
 Returns the type of the lisp object @code{obj}.
 @end deftypefun
 
-@deftypefun int lisp_integer (lisp_object_t* @var{obj})
-Returns the integer value for @var{obj}. This function must not be
-called when the type of @var{obj} is not @code{LISP_TYPE_INTEGER}.
-
 The returned type can be one of
 
 @table @code
@@ -304,6 +323,8 @@ The returned type can be one of
 A symbol.
 @item LISP_TYPE_INTEGER
 An integer.
+@item LISP_TYPE_REAL
+A real.
 @item LISP_TYPE_STRING
 A string.
 @item LISP_TYPE_CONS
@@ -318,6 +339,16 @@ Indicates that end-of-file occured during reading the expression.
 @item LISP_TYPE_PARSE_ERROR
 Indicates a malformed expression.
 @end table
+
+@deftypefun int lisp_integer (lisp_object_t* @var{obj})
+Returns the integer value for @var{obj}. This function must not be
+called when the type of @var{obj} is not @code{LISP_TYPE_INTEGER}.
+@end deftypefun
+
+@deftypefun float lisp_real (lisp_object_t* @var{obj})
+Returns the real value for @var{obj}. This function must not be called
+when the type of @var{obj} is not either @code{LISP_TYPE_REAL} or
+@code{LISP_TYPE_INTEGER}.
 @end deftypefun
 
 @deftypefun char* lisp_symbol (lisp_object_t* @var{obj})
@@ -410,15 +441,15 @@ Frees all memory occupied by @var{obj}, including all its
 subexpressions.
 @end deftypefun
 
-@node Example, Function Index, Reference, (dir)
+@node Example, Function Index, Reference, Top
 @comment  node-name,  next,  previous,  up
 @chapter An Example
 
 The following program reads expressions from standard input, prints the
 string @samp{parse error} when a parse error occurs, exits on
 end-of-file and, if an entered expression is of the form
-@code{(+ }@var{integer1}@code{ }@var{integer2}@code{)}, prints the
-sum of @var{integer1} and @var{integer2}.
+@code{(+ }@var{number1}@code{ }@var{number2}@code{)}, prints the sum of
+@var{number1} and @var{number2}.
 
 @example
 #include <lispreader.h>
@@ -441,10 +472,10 @@ main (void)
         @{
             lisp_object_t *vars[2];
 
-            if (lisp_match_string("(+ #?(integer) #?(integer))",
-                                  obj, vars))
-                printf("%d\n", lisp_integer(vars[0])
-                               + lisp_integer(vars[1]));
+            if (lisp_match_string("(+ #?(or #?(integer) #?(real)) "
+                                     "#?(or #?(integer) #?(real)))",
+                printf("%f\n", lisp_real(vars[0])
+                               + lisp_real(vars[3]));
 
         @}
         else if (type == LISP_TYPE_PARSE_ERROR)
@@ -459,7 +490,7 @@ main (void)
 @}
 @end example
 
-@node Function Index,  , Example, (dir)
+@node Function Index,  , Example, Top
 @comment  node-name,  next,  previous,  up
 @unnumbered Function Index
 
