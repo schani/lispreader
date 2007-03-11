@@ -21,6 +21,7 @@
  */
 
 #include <string.h>
+#include <stdio.h>
 #include <assert.h>
 
 #include "pools.h"
@@ -67,17 +68,17 @@ free_pools (pools_t *pools)
 
 #ifdef __GNUC__
 void*
-_pools_alloc (pools_t *pools, size_t size)
+_pools_alloc (pools_t *pools, size_t byte_size)
 #else
 void*
-pools_alloc (pools_t *pools, size_t size)
+pools_alloc (pools_t *pools, size_t byte_size)
 #endif
 {
-    size_t pool_size;
+    size_t pool_size, size;
     void *p;
 
     pool_size = FIRST_POOL_SIZE << pools->active_pool;
-    size = (size + GRANULARITY - 1) / GRANULARITY;
+    size = (byte_size + GRANULARITY - 1) / GRANULARITY;
 
     while (pools->fill_ptr + size >= pool_size)
     {
@@ -86,17 +87,25 @@ pools_alloc (pools_t *pools, size_t size)
 
 	pools->fill_ptr = 0;
 
+	/* TODO: if the requested block is too big to fit into the
+	   pool to be allocated, it should simply be skipped, which
+	   would save memory. */
 	if (pools->pools[pools->active_pool] == 0)
 	{
-	    pools->pools[pools->active_pool] = (long*)malloc(GRANULARITY * (FIRST_POOL_SIZE << pools->active_pool));
-	    if (pools->pools[pools->active_pool])
+	    size_t new_pool_size = FIRST_POOL_SIZE << pools->active_pool;
+	    size_t new_pool_byte_size = GRANULARITY * new_pool_size;
+
+	    printf("allocing pool %d with size %ld\n", pools->active_pool, new_pool_byte_size);
+
+	    pools->pools[pools->active_pool] = (long*)malloc(new_pool_byte_size);
+	    if (pools->pools[pools->active_pool] == 0)
 		return 0;
+	    memset(pools->pools[pools->active_pool], 0, new_pool_byte_size);
+	    pool_size = new_pool_size;
 	}
     }
 
     assert(pools->fill_ptr + size < pool_size);
-
-    memset(pools->pools[pools->active_pool], 0, GRANULARITY * (FIRST_POOL_SIZE << pools->active_pool));
 
     p = pools->pools[pools->active_pool] + pools->fill_ptr;
     pools->fill_ptr += size;

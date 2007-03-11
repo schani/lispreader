@@ -1,7 +1,7 @@
 /*
  * lispreader.h
  *
- * Copyright (C) 1998-2004 Mark Probst
+ * Copyright (C) 1998-2007 Mark Probst
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,7 +24,7 @@
 
 #include <stdio.h>
 
-#include <allocator.h>
+#include "allocator.h"
 
 #define LISP_STREAM_MMAP_FILE  1
 #define LISP_STREAM_STRING     2

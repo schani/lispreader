@@ -1,8 +1,11 @@
-# $Id: Makefile 849 2005-04-02 17:35:44Z schani $
+# $Id: Makefile 913 2007-03-11 22:41:11Z schani $
 
 VERSION = 0.5
 
-all :
+all : lispreader.a
+
+lispreader.a :
+	$(MAKE) -f Makefile.dist
 
 dist :
 	rm -rf lispreader-$(VERSION)
