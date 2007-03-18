@@ -1,14 +1,14 @@
 # -*- makefile -*-
-# $Id: Makefile.dist 913 2007-03-11 22:41:11Z schani $
+# $Id: Makefile.dist 933 2007-03-18 14:22:54Z schani $
 
 CC=gcc
 CFLAGS=-Wall -g -I.
 
 LISPREADER_OBJS = lispreader.o allocator.o pools.o
 
-all : lispreader.a
+all : liblispreader.a
 
-lispreader.a : $(LISPREADER_OBJS)
+liblispreader.a : $(LISPREADER_OBJS)
 	ar rcu liblispreader.a $(LISPREADER_OBJS)
 
 docexample : docexample.o $(LISPREADER_OBJS)
@@ -21,4 +21,4 @@ docexample : docexample.o $(LISPREADER_OBJS)
 	$(CC) $(CFLAGS) -c $<
 
 clean :
-	rm -f docexample *.o *~
+	rm -f liblispreader.a docexample *.o *~

@@ -1,10 +1,10 @@
-# $Id: Makefile 913 2007-03-11 22:41:11Z schani $
+# $Id: Makefile 933 2007-03-18 14:22:54Z schani $
 
 VERSION = 0.5
 
-all : lispreader.a
+all : liblispreader.a
 
-lispreader.a :
+liblispreader.a :
 	$(MAKE) -f Makefile.dist
 
 dist :
@@ -22,4 +22,5 @@ dist :
 
 clean :
 	rm -f *~
-	make -C doc clean
+	$(MAKE) -f Makefile.dist clean
+	$(MAKE) -C doc clean
