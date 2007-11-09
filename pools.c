@@ -95,7 +95,7 @@ pools_alloc (pools_t *pools, size_t byte_size)
 	    size_t new_pool_size = FIRST_POOL_SIZE << pools->active_pool;
 	    size_t new_pool_byte_size = GRANULARITY * new_pool_size;
 
-	    printf("allocing pool %d with size %ld\n", pools->active_pool, (long)new_pool_byte_size);
+	    /* printf("allocing pool %d with size %ld\n", pools->active_pool, (long)new_pool_byte_size); */
 
 	    pools->pools[pools->active_pool] = (long*)malloc(new_pool_byte_size);
 	    if (pools->pools[pools->active_pool] == 0)
