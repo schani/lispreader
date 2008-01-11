@@ -3,7 +3,7 @@
  *
  * lispreader
  *
- * Copyright (C) 2002-2005 Mark Probst
+ * Copyright (C) 2002-2007 Mark Probst
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -46,12 +46,14 @@ init_pools (pools_t *pools)
     return 1;
 }
 
+#ifndef __GNUC__
 void
 reset_pools (pools_t *pools)
 {
     pools->active_pool = 0;
     pools->fill_ptr = 0;
 }
+#endif
 
 void
 free_pools (pools_t *pools)
@@ -62,8 +64,6 @@ free_pools (pools_t *pools)
     for (i = 0; i < NUM_POOLS; ++i)
 	if (pools->pools[i] != 0)
 	    free(pools->pools[i]);
-
-    init_pools(pools);
 }
 
 #ifdef __GNUC__

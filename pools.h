@@ -3,7 +3,7 @@
  *
  * lispreader
  *
- * Copyright (C) 2002-2005 Mark Probst
+ * Copyright (C) 2002-2007 Mark Probst
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -38,7 +38,6 @@ typedef struct
 } pools_t;
 
 int init_pools (pools_t *pools);
-void reset_pools (pools_t *pools);
 void free_pools (pools_t *pools);
 
 #ifdef __GNUC__
@@ -60,6 +59,17 @@ pools_alloc (pools_t *pools, size_t size)
 }
 #else
 void* pools_alloc (pools_t *pools, size_t size);
+#endif
+
+#ifdef __GNUC__
+static inline void
+reset_pools (pools_t *pools)
+{
+    pools->active_pool = 0;
+    pools->fill_ptr = 0;
+}
+#else
+void reset_pools (pools_t *pools);
 #endif
 
 #endif
