@@ -87,7 +87,10 @@ main (int argc, char *argv[])
 
 	    default :
 		if (do_dump)
+		{
 		    lisp_dump(obj, stdout);
+		    fputc('\n', stdout);
+		}
 	}
     }
 

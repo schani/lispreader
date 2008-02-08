@@ -1,7 +1,7 @@
 /*
  * lispreader.c
  *
- * Copyright (C) 1998-2004 Mark Probst
+ * Copyright (C) 1998-2008 Mark Probst
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -1009,12 +1009,101 @@ lisp_list_nth (lisp_object_t *obj, int index)
     return obj->v.cons.car;
 }
 
+int
+lisp_print_nil (FILE *out)
+{
+    if (fputs("()", out) == EOF)
+	return 0;
+    return 1;
+}
+
+int
+lisp_print_open_paren (FILE *out)
+{
+    if (fputc('(', out) == EOF)
+	return 0;
+    return 1;
+}
+
+int
+lisp_print_close_paren (FILE *out)
+{
+    if (fputc(')', out) == EOF)
+	return 0;
+    return 1;
+}
+
+int
+lisp_print_dot (FILE *out)
+{
+    if (fputs(". ", out) == EOF)
+	return 0;
+    return 1;
+}
+
+int
+lisp_print_integer (int integer, FILE *out)
+{
+    if (fprintf(out, "%d ", integer) < 0)
+	return 0;
+    return 1;
+}
+
+int
+lisp_print_real (float real, FILE *out)
+{
+    if (fprintf(out, "%g ", real) < 0)
+	return 0;
+    return 1;
+}
+
+int
+lisp_print_symbol (const char *symbol, FILE *out)
+{
+    if (fprintf(out, "%s ", symbol) < 0)
+	return 0;
+    return 1;
+}
+
+int
+lisp_print_string (const char *string, FILE *out)
+{
+    const char *p;
+
+    if (fputc('"', out) == EOF)
+	return 0;
+
+    for (p = string; *p != 0; ++p)
+    {
+	if (*p == '"' || *p == '\\')
+	{
+	    if (fputc('\\', out) == EOF)
+		return 0;
+	}
+
+	if (fputc(*p, out) == EOF)
+	    return 0;
+    }
+
+    if (fputs("\" ", out) == EOF)
+	return 0;
+    return 1;
+}
+
+int
+lisp_print_boolean (int boolean, FILE *out)
+{
+    if (fprintf(out, "#%c ", boolean ? 't' : 'f') < 0)
+	return 0;
+    return 1;
+}
+
 void
 lisp_dump (lisp_object_t *obj, FILE *out)
 {
     if (obj == 0)
     {
-	fprintf(out, "()");
+	lisp_print_nil(out);
 	return;
     }
 
@@ -1029,35 +1118,27 @@ lisp_dump (lisp_object_t *obj, FILE *out)
 	    break;
 
 	case LISP_TYPE_INTEGER :
-	    fprintf(out, "%d", lisp_integer(obj));
+	    lisp_print_integer(lisp_integer(obj), out);
 	    break;
 
         case LISP_TYPE_REAL :
-	    fprintf(out, "%f", lisp_real(obj));
+	    lisp_print_real(lisp_real(obj), out);
 	    break;
 
 	case LISP_TYPE_SYMBOL :
-	    fputs(lisp_symbol(obj), out);
+	    lisp_print_symbol(lisp_symbol(obj), out);
 	    break;
 
 	case LISP_TYPE_STRING :
-	    {
-		char *p;
-
-		fputc('"', out);
-		for (p = lisp_string(obj); *p != 0; ++p)
-		{
-		    if (*p == '"' || *p == '\\')
-			fputc('\\', out);
-		    fputc(*p, out);
-		}
-		fputc('"', out);
-	    }
+	    lisp_print_string(lisp_string(obj), out);
 	    break;
 
 	case LISP_TYPE_CONS :
 	case LISP_TYPE_PATTERN_CONS :
-	    fputs(lisp_type(obj) == LISP_TYPE_CONS ? "(" : "#?(", out);
+	    if (lisp_type(obj) == LISP_TYPE_CONS)
+		lisp_print_open_paren(out);
+	    else
+		fputs("#?(", out);
 	    while (obj != 0)
 	    {
 		lisp_dump(lisp_car(obj), out);
@@ -1067,22 +1148,17 @@ lisp_dump (lisp_object_t *obj, FILE *out)
 		    if (lisp_type(obj) != LISP_TYPE_CONS
 			&& lisp_type(obj) != LISP_TYPE_PATTERN_CONS)
 		    {
-			fputs(" . ", out);
+			lisp_print_dot(out);
 			lisp_dump(obj, out);
 			break;
 		    }
-		    else
-			fputc(' ', out);
 		}
 	    }
-	    fputc(')', out);
+	    lisp_print_close_paren(out);
 	    break;
 
 	case LISP_TYPE_BOOLEAN :
-	    if (lisp_boolean(obj))
-		fputs("#t", out);
-	    else
-		fputs("#f", out);
+	    lisp_print_boolean(lisp_boolean(obj), out);
 	    break;
 
 	default :

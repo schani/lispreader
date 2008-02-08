@@ -1,7 +1,7 @@
 /*
  * lispreader.h
  *
- * Copyright (C) 1998-2007 Mark Probst
+ * Copyright (C) 1998-2008 Mark Probst
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -154,6 +154,16 @@ lisp_object_t* lisp_make_boolean (int value);
 int lisp_list_length (lisp_object_t *obj);
 lisp_object_t* lisp_list_nth_cdr (lisp_object_t *obj, int index);
 lisp_object_t* lisp_list_nth (lisp_object_t *obj, int index);
+
+int lisp_print_nil (FILE *out);
+int lisp_print_open_paren (FILE *out);
+int lisp_print_close_paren (FILE *out);
+int lisp_print_dot (FILE *out);
+int lisp_print_integer (int integer, FILE *out);
+int lisp_print_real (float real, FILE *out);
+int lisp_print_symbol (const char *symbol, FILE *out);
+int lisp_print_string (const char *string, FILE *out);
+int lisp_print_boolean (int boolean, FILE *out);
 
 void lisp_dump (lisp_object_t *obj, FILE *out);
 
