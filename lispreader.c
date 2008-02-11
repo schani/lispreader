@@ -1052,7 +1052,7 @@ lisp_print_integer (int integer, FILE *out)
 int
 lisp_print_real (float real, FILE *out)
 {
-    if (fprintf(out, "%g ", real) < 0)
+    if (fprintf(out, "%f ", real) < 0)
 	return 0;
     return 1;
 }
