@@ -1165,3 +1165,24 @@ lisp_dump (lisp_object_t *obj, FILE *out)
 	    assert(0);
     }
 }
+
+lisp_object_t*
+lisp_proplist_lookup_symbol (lisp_object_t *list, const char *key)
+{
+    while (lisp_cons_p(list))
+    {
+	if (lisp_symbol_p(lisp_car(list)) && strcmp(key, lisp_symbol(lisp_car(list))) == 0)
+	{
+	    if (lisp_cons_p(lisp_cdr(list)))
+		return lisp_car(lisp_cdr(list));
+	    return lisp_nil();
+	}
+
+	if (lisp_cons_p(lisp_cdr(list)))
+	    list = lisp_cdr(lisp_cdr(list));
+	else
+	    return lisp_nil();
+    }
+
+    return lisp_nil();
+}

@@ -167,6 +167,8 @@ int lisp_print_boolean (int boolean, FILE *out);
 
 void lisp_dump (lisp_object_t *obj, FILE *out);
 
+lisp_object_t* lisp_proplist_lookup_symbol (lisp_object_t *list, const char *key);
+
 #define lisp_nil()           ((lisp_object_t*)0)
 
 #define lisp_nil_p(obj)      (obj == 0)
