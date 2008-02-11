@@ -174,6 +174,7 @@ lisp_object_t* lisp_proplist_lookup_symbol (lisp_object_t *list, const char *key
 #define lisp_nil_p(obj)      (obj == 0)
 #define lisp_integer_p(obj)  (lisp_type((obj)) == LISP_TYPE_INTEGER)
 #define lisp_real_p(obj)     (lisp_type((obj)) == LISP_TYPE_REAL)
+#define lisp_number_p(obj)   (lisp_integer_p((obj)) || lisp_real_p((obj)))
 #define lisp_symbol_p(obj)   (lisp_type((obj)) == LISP_TYPE_SYMBOL)
 #define lisp_string_p(obj)   (lisp_type((obj)) == LISP_TYPE_STRING)
 #define lisp_cons_p(obj)     (lisp_type((obj)) == LISP_TYPE_CONS)
