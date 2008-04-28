@@ -1056,9 +1056,9 @@ lisp_print_real (float real, FILE *out)
 {
     char buf[G_ASCII_DTOSTR_BUF_SIZE];
 
-    g_ascii_dtostr(buf, G_ASCII_DTOSTR_BUF_SIZE, real);
+    g_ascii_formatd(buf, G_ASCII_DTOSTR_BUF_SIZE, "%f", real);
 
-    if (fputs(buf, out) == EOF)
+    if (fprintf(out, "%s ", buf) < 0)
 	return 0;
     return 1;
 }
