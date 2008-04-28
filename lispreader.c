@@ -29,6 +29,8 @@
 #include <fcntl.h>
 #include <assert.h>
 
+#include <glib.h>
+
 #include <lispreader.h>
 
 #define TOKEN_ERROR                   -1
@@ -505,11 +507,11 @@ lisp_read_with_allocator (allocator_t *allocator, lisp_stream_t *in)
 		return lisp_make_integer_with_allocator(allocator, my_atoi(mmap_token_start, mmap_token_stop));
 	    else
 		return lisp_make_integer_with_allocator(allocator, atoi(token_string));
-	
+
         case TOKEN_REAL :
 	    if (IS_STREAM_MMAPPED(in))
 		copy_mmapped_token();
-	    return lisp_make_real_with_allocator(allocator, (float)atof(token_string));
+	    return lisp_make_real_with_allocator(allocator, (float)g_ascii_strtod(token_string, NULL));
 
 	case TOKEN_DOT :
 	    return &dot_marker;
@@ -1052,7 +1054,11 @@ lisp_print_integer (int integer, FILE *out)
 int
 lisp_print_real (float real, FILE *out)
 {
-    if (fprintf(out, "%f ", real) < 0)
+    char buf[G_ASCII_DTOSTR_BUF_SIZE];
+
+    g_ascii_dtostr(buf, G_ASCII_DTOSTR_BUF_SIZE, real);
+
+    if (fputs(buf, out) == EOF)
 	return 0;
     return 1;
 }
