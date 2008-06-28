@@ -82,17 +82,19 @@ pools_alloc (pools_t *pools, size_t byte_size)
 
     while (pools->fill_ptr + size >= pool_size)
     {
+	size_t new_pool_size;
+
 	++pools->active_pool;
 	assert(pools->active_pool < NUM_POOLS);
 
 	pools->fill_ptr = 0;
 
+	new_pool_size = FIRST_POOL_SIZE << pools->active_pool;
 	/* TODO: if the requested block is too big to fit into the
 	   pool to be allocated, it should simply be skipped, which
 	   would save memory. */
 	if (pools->pools[pools->active_pool] == 0)
 	{
-	    size_t new_pool_size = FIRST_POOL_SIZE << pools->active_pool;
 	    size_t new_pool_byte_size = GRANULARITY * new_pool_size;
 
 	    /* printf("allocing pool %d with size %ld\n", pools->active_pool, (long)new_pool_byte_size); */
@@ -100,9 +102,12 @@ pools_alloc (pools_t *pools, size_t byte_size)
 	    pools->pools[pools->active_pool] = (long*)malloc(new_pool_byte_size);
 	    if (pools->pools[pools->active_pool] == 0)
 		return 0;
+	    /* FIXME: either remove the memset here or memset the pool
+	       even if it's not newly allocated, because pools can be
+	       reset. */
 	    memset(pools->pools[pools->active_pool], 0, new_pool_byte_size);
-	    pool_size = new_pool_size;
 	}
+	pool_size = new_pool_size;
     }
 
     assert(pools->fill_ptr + size < pool_size);
