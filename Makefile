@@ -12,7 +12,7 @@ dist :
 	mkdir lispreader-$(VERSION)
 	mkdir lispreader-$(VERSION)/doc
 	cp README COPYING NEWS lispreader-$(VERSION)/
-	cp -pr lispreader.[ch] lispscan.h allocator.[ch] pools.[ch] docexample.c lispreader-$(VERSION)/
+	cp -pr lispreader.[ch] lispscan.h allocator.[ch] pools.[ch] docexample.c lispcat.c lispreader-$(VERSION)/
 	cp Makefile.dist lispreader-$(VERSION)/Makefile
 	cp doc/{lispreader,version}.texi lispreader-$(VERSION)/doc/
 	cp doc/Makefile lispreader-$(VERSION)/doc/
