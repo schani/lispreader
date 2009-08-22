@@ -21,7 +21,9 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifndef __MINGW32__
 #include <sys/mman.h>
+#endif
 #include <unistd.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -216,7 +218,11 @@ lisp_stream_init_path (lisp_stream_t *stream, const char *path)
 
     len = sb.st_size;
 
+#ifdef __MINGW32__
+    buf = (void*)-1;
+#else
     buf = mmap(0, len, PROT_READ, MAP_SHARED, fd, 0);
+#endif
 
     if (buf == (void*)-1)
     {
@@ -285,9 +291,11 @@ lisp_stream_free_path  (lisp_stream_t *stream)
     assert(stream->type == LISP_STREAM_MMAP_FILE
 	   || stream->type == LISP_STREAM_FILE);
 
+#ifndef __MINGW32__
     if (stream->type == LISP_STREAM_MMAP_FILE)
 	munmap(stream->v.mmap.buf, stream->v.mmap.end - stream->v.mmap.buf);
     else
+#endif
 	fclose(stream->v.file);
 }
 
