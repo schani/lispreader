@@ -1,0 +1,1060 @@
+<HTML>
+<HEAD>
+<!-- Created by texi2html 1.56k from lispreader.texi on 2 April 2005 -->
+
+<TITLE>Reference Manual</TITLE>
+</HEAD>
+<BODY>
+<H1><CODE>lispreader</CODE></H1>
+<H2>Reference manual</H2>
+<H2>last updated 2 April 2005 for version 0.5</H2>
+<ADDRESS>Mark Probst (<A HREF="mailto:schani@complang.tuwien.ac.at">schani@complang.tuwien.ac.at</A>)</ADDRESS>
+<P>
+<P><HR><P>
+
+
+<H1><A NAME="SEC1" HREF="lispreader_toc.html#TOC1">Introduction</A></H1>
+
+
+
+<H2><A NAME="SEC2" HREF="lispreader_toc.html#TOC2">What is <CODE>lispreader</CODE>?</A></H2>
+
+<P>
+<CODE>lispreader</CODE> is a small library for reading expressions in Lisp
+syntax. It has originally been written to facilitate simple exchange of
+structured data between processes but its main purpose is now to provide
+a framework for reading configuration files. To simplify interpretation
+of the data read, <CODE>lispreader</CODE> also provides functions for simple
+matching of expressions against patterns.
+
+
+<P>
+<CODE>lispreader</CODE> is also used in several application to read and
+write data files. Lisp syntax is very suitable for doing this,
+especially if the data is organized hierachically.
+
+
+
+
+<H2><A NAME="SEC3" HREF="lispreader_toc.html#TOC3">What is <CODE>lispreader</CODE> not?</A></H2>
+
+<P>
+<CODE>lispreader</CODE> is not a Lisp system in that it cannot, by itself,
+interpret Lisp expressions. It only provides a subset of the features of
+libraries like Guile of librep (namely the reading of expressions) and
+does thus not compete directly with those. If all you need is a simple
+way to read Lisp expressions without interpreting them with Lisp
+semantics, you will probably be satisfied with <CODE>lispreader</CODE>.
+
+
+
+
+<H2><A NAME="SEC4" HREF="lispreader_toc.html#TOC4">Licence and Warranty</A></H2>
+
+<P>
+<CODE>lispreader</CODE> is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License as published
+by the Free Software Foundation; either version 2 of the License, or (at
+your option) any later version.
+
+
+<P>
+<CODE>lispreader</CODE> is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+
+
+<P>
+You should have received a copy of the GNU General Public License
+along with <CODE>chpp</CODE>; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
+
+
+
+<H2><A NAME="SEC5" HREF="lispreader_toc.html#TOC5">Obtaining <CODE>lispreader</CODE></A></H2>
+
+<P>
+<CODE>lispreader</CODE> is available for free download on the world-wide-web
+at the URL <A HREF="http://www.complang.tuwien.ac.at/schani/lispreader/">http://www.complang.tuwien.ac.at/schani/lispreader/</A>.
+
+
+
+
+<H1><A NAME="SEC6" HREF="lispreader_toc.html#TOC6">Using <CODE>lispreader</CODE> in your programs</A></H1>
+
+<P>
+<CODE>lispreader</CODE> consists of only a few C files, namely
+<TT>`lispreader.c'</TT>, <TT>`lispreader.h'</TT>, <TT>`lispscan.h'</TT>,
+<TT>`allocator.c'</TT>, <TT>`allocator.h'</TT>, <TT>`pools.c'</TT>, and
+<TT>`pools.h'</TT>.  To incorporate <CODE>lispreader</CODE> in your own
+programs, just add these files to your own program's files.
+
+
+
+
+<H1><A NAME="SEC7" HREF="lispreader_toc.html#TOC7">Syntax</A></H1>
+
+<P>
+<CODE>lispreader</CODE> can read lists consisting of other lists, symbols,
+strings, integers, real numbers and booleans. It also provides a syntax
+for specifying patterns.
+
+
+
+
+<H2><A NAME="SEC8" HREF="lispreader_toc.html#TOC8">Comments</A></H2>
+
+<P>
+Comments are started by the semicolon (<CODE>;</CODE>) and reach until the end
+of the line:
+
+
+
+<PRE>
+; this line is completely ignored
+</PRE>
+
+
+
+<H2><A NAME="SEC9" HREF="lispreader_toc.html#TOC9">Lists</A></H2>
+
+<P>
+Lists consist of so-called cons-pairs, or conses. A cons is constituted
+by its car and cdr. A list is defined as either being the empty list,
+which is no cons at all, or as being a cons, the cdr of which is a
+list. The cars of these conses are the actual elements of the list.
+
+
+<P>
+An example: The list <CODE>(a b c)</CODE> consists of three conses, the cars
+of which are the symbols <CODE>a</CODE>, <CODE>b</CODE> and <CODE>c</CODE>. The structure
+can be depicted using a box diagram:
+
+
+
+<PRE>
+ _ _     _ _     _ _
+|_|_|--&#62;|_|_|--&#62;|_|_|--&#62;nil
+ |       |       |
+ v       v       v
+ a       b       c
+</PRE>
+
+<P>
+Each box denotes a cons, with the left half being its car and the right
+half being its cdr. <CODE>nil</CODE> denotes the empty list.
+
+
+<P>
+It is also possible to explicitly set the cdr of the last cons using the
+dot-notation: <CODE>(a b . c)</CODE> can be illustrated thus:
+
+
+
+<PRE>
+ _ _     _ _
+|_|_|--&#62;|_|_|--&#62;c
+ |       |
+ v       v
+ a       b
+</PRE>
+
+<P>
+Note that this is technically not a list. Since the empty list can be
+written as <CODE>()</CODE>, the list <CODE>(a b c)</CODE> can be written using the
+dot-notation as <CODE>(a . (b . (c . ())))</CODE>.
+
+
+
+
+<H2><A NAME="SEC10" HREF="lispreader_toc.html#TOC10">Symbols</A></H2>
+
+<P>
+Symbols are pretty much everything that cannot be interpreted as
+anything else. They can have arbitrary length.
+
+
+
+
+<H2><A NAME="SEC11" HREF="lispreader_toc.html#TOC11">Integers</A></H2>
+
+<P>
+As integers are internally represented by <CODE>int</CODE> values, their range
+is restricted to the range of the <CODE>int</CODE> data type. Bignums are not
+supported.
+
+
+
+
+<H2><A NAME="SEC12" HREF="lispreader_toc.html#TOC12">Reals</A></H2>
+
+<P>
+Reals are internally represented by values of the <CODE>float</CODE>
+datatype. <CODE>lispreader</CODE> cannot yet interpret exponential notation or
+reals without digits before the dot.
+
+
+
+
+<H2><A NAME="SEC13" HREF="lispreader_toc.html#TOC13">Strings</A></H2>
+
+<P>
+Strings are delimited on both sides by double quotes (<SAMP>`"'</SAMP>). The
+backslash (<SAMP>`\'</SAMP>) is used as escape character. The sequence <SAMP>`\n'</SAMP>
+is interpreted as newline, <SAMP>`\t'</SAMP> as tab. All other escape sequences
+evaluate to the char after the backslash, e.g. <SAMP>`\\'</SAMP> denotes the
+backslash itself and <SAMP>`\"'</SAMP> denotes the double quote.
+
+
+
+
+<H2><A NAME="SEC14" HREF="lispreader_toc.html#TOC14">Booleans</A></H2>
+
+<P>
+The boolean values true and false are represented by <CODE>#t</CODE> and
+<CODE>#f</CODE>, respectively.
+
+
+
+
+<H2><A NAME="SEC15" HREF="lispreader_toc.html#TOC15">Patterns</A></H2>
+
+<P>
+Patterns are used to represent classes of expressions. They contain no
+other value than the types of expressions they match against.
+
+
+<P>
+Patterns are written using a special list syntax where the opening
+parenthesis is replaced by <SAMP>`#?('</SAMP>. There are patterns for matching
+all types of simple expressions:
+
+
+<DL COMPACT>
+
+<DT><CODE>#?(symbol)</CODE>
+<DD>
+Any symbol.
+<DT><CODE>#?(string)</CODE>
+<DD>
+Any string.
+<DT><CODE>#?(integer)</CODE>
+<DD>
+Any integer.
+<DT><CODE>#?(real)</CODE>
+<DD>
+Any real.
+<DT><CODE>#?(boolean)</CODE>
+<DD>
+<CODE>#t</CODE> of <CODE>#f</CODE>.
+</DL>
+
+<P>
+Two other patterns have a wider scope:
+
+
+<DL COMPACT>
+
+<DT><CODE>#?(list)</CODE>
+<DD>
+Any list.
+<DT><CODE>#?(number)</CODE>
+<DD>
+Any number, i.e., any integer or real.
+<DT><CODE>#?(any)</CODE>
+<DD>
+Any expression (including lists).
+</DL>
+
+<P>
+It is also possible to construct a pattern matching at least one out of
+a given set of expressions, which themselves can contain patterns, using
+the <CODE>or</CODE> pattern. For example, the pattern <CODE>#?(or (a . #?(list)) (b #?(integer)))</CODE>
+matches the list <CODE>(a #t 43)</CODE> as well as the list <CODE>(b 1)</CODE>, but
+not the list <CODE>(b #f)</CODE>. As another example, <CODE>#?(boolean)</CODE> is
+equivalent to <CODE>#?(or #t #f)</CODE>.
+
+
+
+
+<H1><A NAME="SEC16" HREF="lispreader_toc.html#TOC16">Pools</A></H1>
+
+
+
+<H2><A NAME="SEC17" HREF="lispreader_toc.html#TOC17">Introduction</A></H2>
+
+<P>
+Most applications of <CODE>lispreader</CODE> use it to quickly read bits of
+data from a file, process it, and then read the next bit, until the
+end of the file.  If the file is big, it is an advantage if reading is
+fast.  Part of the reading process is allocating memory for the data
+read, so fast memory allocation results in better reading performance.
+
+
+<P>
+<CODE>lispreader</CODE> comes with a memory allocator optimized for this
+application pattern, called the "pools" allocator.  It is very fast,
+can allocate lots of small chunks of memory with virtually no overhead
+apart from the alignment padding, and can free all allocated memory at
+once.  The downside is that freeing all allocated memory is the only
+way of freeing.
+
+
+<P>
+Using pools is not mandatory for using <CODE>lispreader</CODE>, but it
+increases performance significantly (by about a factor of 2) compared
+to the standard malloc allocator.  If you never read files larger than
+a few tens of kilobytes, you will probably never notice, though.
+
+
+
+
+<H2><A NAME="SEC18" HREF="lispreader_toc.html#TOC18">Reference</A></H2>
+
+<P>
+<DL>
+<DT><U>Function:</U> int <B>init_pools</B> <I>(pools_t* <VAR>pools</VAR>)</I>
+<DD><A NAME="IDX1"></A>
+Initializes the pools data structure pointed to by <VAR>pools</VAR>.  After
+calling this function, the pools can be used to allocate memory via
+<CODE>pools_alloc</CODE>.  Returns non-zero upon success, zero upon failure.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> void <B>reset_pools</B> <I>(pools_t* <VAR>pools</VAR>)</I>
+<DD><A NAME="IDX2"></A>
+Resets the pools pointed to by <VAR>pools</VAR>.  This does not actually
+free the memory allocated from this pools, but reuses it for further
+allocations, i.e., the data previously allocated from it will be
+overwritten.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> void <B>free_pools</B> <I>(pools_t* <VAR>pools</VAR>)</I>
+<DD><A NAME="IDX3"></A>
+Frees all the memory allocated by <VAR>pools</VAR>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> void* <B>pools_alloc</B> <I>(pools_t* <VAR>pools</VAR>, size_t <VAR>size</VAR>)</I>
+<DD><A NAME="IDX4"></A>
+Allocates a region of memory <VAR>size</VAR> bytes long from the pools
+pointed to by <VAR>pools</VAR>.  Returns a null pointer if the allocation
+failed.
+</DL>
+
+
+
+
+<H1><A NAME="SEC19" HREF="lispreader_toc.html#TOC19">Allocators</A></H1>
+
+
+
+<H2><A NAME="SEC20" HREF="lispreader_toc.html#TOC20">Introduction</A></H2>
+
+<P>
+The <CODE>allocator_t</CODE> data structure is <CODE>lispreader</CODE>'s interface
+to your memory allocator of choice:
+
+
+
+<PRE>
+typedef struct
+{
+    void* (*alloc) (void *allocator_data, size_t size);
+    void (*free) (void *allocator_data, void *chunk);
+    void *allocator_data;
+} allocator_t;
+</PRE>
+
+<P>
+An allocator must provide two functions:
+
+
+
+<UL>
+<LI>
+
+<VAR>alloc</VAR> allocates an aligned chunk of memory at least <VAR>size</VAR>
+bytes long.
+
+<LI>
+
+<VAR>free</VAR> frees the memory pointed to by <VAR>chunk</VAR>.
+</UL>
+
+<P>
+Both functions are always passed the value of <VAR>allocator_data</VAR> as
+their first argument.
+
+
+<P>
+All <CODE>lispreader</CODE> functions which allocate or free (non-temporary)
+memory come in two versions: The "normal" version uses the standard
+<CODE>malloc</CODE>/<CODE>free</CODE> memory allocation mechanism.  The
+<CODE>*_with_allocator</CODE> version takes a pointer to an
+<CODE>allocator_t</CODE> as its first argument and allocates and frees
+memory via that allocator.
+
+
+
+
+<H2><A NAME="SEC21" HREF="lispreader_toc.html#TOC21">Reference</A></H2>
+
+<P>
+<DL>
+<DT><U>Global Variable:</U> allocator_t <B>malloc_allocator</B>
+<DD><A NAME="IDX5"></A>
+This is an allocator which uses the standard <CODE>malloc</CODE> and
+<CODE>free</CODE> memory allocation functions.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> void <B>init_pools_allocator</B> <I>(allocator_t* <VAR>allocator</VAR>, pools_t* <VAR>pools</VAR>)</I>
+<DD><A NAME="IDX6"></A>
+Initializes the data structure pointed to by <VAR>allocator</VAR> to use
+the pools allocator pointed to by <VAR>pools</VAR>.  Note that the
+<VAR>free</VAR> function for the pools allocator does not free memory, so
+you'll have to free the pools yourself.
+</DL>
+
+
+
+
+<H1><A NAME="SEC22" HREF="lispreader_toc.html#TOC22"><CODE>lispreader</CODE> Reference</A></H1>
+
+
+
+<H2><A NAME="SEC23" HREF="lispreader_toc.html#TOC23">Reading expressions</A></H2>
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_stream_t* <B>lisp_stream_init_path</B> <I>(lisp_stream_t* <VAR>stream</VAR>, const char* <VAR>path</VAR>)</I>
+<DD><A NAME="IDX7"></A>
+Initializes <VAR>stream</VAR> to be a file stream reading from the file
+with path <VAR>path</VAR>.  Returns a null pointer if the file cannot be
+opened.  The caller is supposed to use the function
+<CODE>lisp_stream_free_path</CODE> to close the file.
+
+
+<P>
+This function should be preferred over <CODE>lisp_stream_init_file</CODE>
+because it uses memory mapping if possible, resulting in better
+parsing performance.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> void <B>lisp_stream_free_path</B> <I>(lisp_stream_t* <VAR>stream</VAR>)</I>
+<DD><A NAME="IDX8"></A>
+Closes the file associated with the file stream <VAR>stream</VAR>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_stream_t* <B>lisp_stream_init_file</B> <I>(lisp_stream_t* <VAR>stream</VAR>, FILE* <VAR>file</VAR>)</I>
+<DD><A NAME="IDX9"></A>
+Initializes <VAR>stream</VAR> to be a file stream reading from
+<VAR>file</VAR>. The caller is still responsible to close <VAR>file</VAR> when it
+is not needed any more.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_stream_t* <B>lisp_stream_init_string</B> <I>(lisp_stream_t* <VAR>stream</VAR>, char* <VAR>buf</VAR>)</I>
+<DD><A NAME="IDX10"></A>
+Initializes <VAR>stream</VAR> to be a string stream reading from
+<VAR>buf</VAR>. <VAR>buf</VAR> is not copied by this function, hence the effects
+of reading from the stream after modifying <VAR>buf</VAR> are undefined.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_stream_t* <B>lisp_stream_init_any</B> <I>(lisp_stream_t* <VAR>stream</VAR>, void* <VAR>data</VAR>, int (*<VAR>next_char</VAR>) (void *data), void (*<VAR>unget_char</VAR>) (char c, void *data))</I>
+<DD><A NAME="IDX11"></A>
+Initializes <VAR>stream</VAR> to be a user-defined stream. The function
+<VAR>next_char</VAR> is used to read individual characters from the
+stream. It must return <CODE>EOF</CODE> upon end-of-file and on all
+invocations succeeding the invocation that first returned
+<CODE>EOF</CODE>. <VAR>unget_char</VAR> is called to push back a character for
+reading it again. The character pushed back is always the character
+returned by the last call to <VAR>next_char</VAR>. The next call to
+<VAR>next_char</VAR> must return that character. <VAR>unget_char</VAR> is never
+called twice without at least a call to <VAR>next_char</VAR> in
+between. <VAR>data</VAR> is always passed to <VAR>next_char</VAR> and
+<VAR>unget_char</VAR>. No other action whatsoever is performed on <VAR>data</VAR>,
+i.e. should it point to a dynamically allocated memory region, the
+application is responsible for freeing it after the stream has been
+closed.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_read</B> <I>(lisp_stream_t* <VAR>in</VAR>)</I>
+<DD><A NAME="IDX12"></A>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_read_with_allocator</B> <I>(allocator_t* <VAR>allocator</VAR>, lisp_stream_t* <VAR>in</VAR>)</I>
+<DD><A NAME="IDX13"></A>
+Reads a Lisp expression from the stream <VAR>in</VAR> and returns it. The
+caller is responsible for deallocating its memory using
+<CODE>lisp_free</CODE>/<CODE>lisp_free_with_allocator</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_read_from_string</B> <I>(char* <VAR>buf</VAR>)</I>
+<DD><A NAME="IDX14"></A>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_read_from_string_with_allocator</B> <I>(allocator_t* <VAR>allocator</VAR>, const char* <VAR>buf</VAR>)</I>
+<DD><A NAME="IDX15"></A>
+Reads a Lisp expression from the string <VAR>buf</VAR> and returns it. The
+caller is responsible for deallocating its memory using
+<CODE>lisp_free</CODE>/<CODE>lisp_free_with_allocator</CODE>. Although <VAR>buf</VAR> may contain more than one
+expression, only the first is read. If you need to read more than one
+expression from a string, use <CODE>lisp_read</CODE>/<CODE>lisp_read_with_allocator</CODE> on a string stream
+created by <CODE>lisp_stream_init_string</CODE>.
+</DL>
+
+
+
+
+<H2><A NAME="SEC24" HREF="lispreader_toc.html#TOC24">Writing expressions</A></H2>
+
+<P>
+<DL>
+<DT><U>Function:</U> int <B>lisp_dump</B> <I>(lisp_object_t* <VAR>obj</VAR>, FILE* <VAR>out</VAR>)</I>
+<DD><A NAME="IDX16"></A>
+Writes the external representation of <VAR>obj</VAR>, which can be read again
+by <CODE>lisp_read</CODE>, to <VAR>out</VAR>.
+</DL>
+
+
+
+
+<H2><A NAME="SEC25" HREF="lispreader_toc.html#TOC25">Examining expressions</A></H2>
+
+<P>
+<DL>
+<DT><U>Function:</U> int <B>lisp_type</B> <I>(lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX17"></A>
+Returns the type of the lisp object <CODE>obj</CODE>.
+</DL>
+
+
+<P>
+The returned type can be one of
+
+
+<DL COMPACT>
+
+<DT><CODE>LISP_TYPE_NIL</CODE>
+<DD>
+The empty list.
+<DT><CODE>LISP_TYPE_SYMBOL</CODE>
+<DD>
+A symbol.
+<DT><CODE>LISP_TYPE_INTEGER</CODE>
+<DD>
+An integer.
+<DT><CODE>LISP_TYPE_REAL</CODE>
+<DD>
+A real.
+<DT><CODE>LISP_TYPE_STRING</CODE>
+<DD>
+A string.
+<DT><CODE>LISP_TYPE_CONS</CODE>
+<DD>
+A cons-pair.
+<DT><CODE>LISP_TYPE_BOOLEAN</CODE>
+<DD>
+A boolean.
+<DT><CODE>LISP_TYPE_PATTERN_CONS</CODE>
+<DD>
+A cons-pair of a pattern. The interpretation of these should be left to
+the function <CODE>lisp_compile_pattern</CODE>.
+<DT><CODE>LISP_TYPE_EOF</CODE>
+<DD>
+Indicates that end-of-file occured during reading the expression.
+<DT><CODE>LISP_TYPE_PARSE_ERROR</CODE>
+<DD>
+Indicates a malformed expression.
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> int <B>lisp_nil_p</B> <I>(lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX18"></A>
+If <VAR>obj</VAR> is the empty list, returns a non-zero value, otherwise
+zero.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> int <B>lisp_integer_p</B> <I>(lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX19"></A>
+If <VAR>obj</VAR> is an integer object, returns a non-zero value, otherwise
+zero.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> int <B>lisp_integer</B> <I>(lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX20"></A>
+Returns the integer value for <VAR>obj</VAR>. This function must not be
+called when the type of <VAR>obj</VAR> is not <CODE>LISP_TYPE_INTEGER</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> int <B>lisp_real_p</B> <I>(lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX21"></A>
+If <VAR>obj</VAR> is a real object, returns a non-zero value, otherwise zero.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> float <B>lisp_real</B> <I>(lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX22"></A>
+Returns the real value for <VAR>obj</VAR>. This function must not be called
+when the type of <VAR>obj</VAR> is not either <CODE>LISP_TYPE_REAL</CODE> or
+<CODE>LISP_TYPE_INTEGER</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> int <B>lisp_symbol_p</B> <I>(lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX23"></A>
+If <VAR>obj</VAR> is a symbol, returns a non-zero value, otherwise zero.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> char* <B>lisp_symbol</B> <I>(lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX24"></A>
+Returns the string for the symbol stored in <VAR>obj</VAR>. This function
+must not be called when the type of <VAR>obj</VAR> is not
+<CODE>LISP_TYPE_SYMBOL</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> int <B>lisp_string_p</B> <I>(lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX25"></A>
+If <VAR>obj</VAR> is a string object, returns a non-zero value, otherwise
+zero.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> char* <B>lisp_string</B> <I>(lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX26"></A>
+Returns the string value for <VAR>obj</VAR>. This function must not be called
+when the type of <VAR>obj</VAR> is not <CODE>LISP_TYPE_STRING</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> int <B>lisp_boolean_p</B> <I>(lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX27"></A>
+If <VAR>obj</VAR> is a boolean object, returns a non-zero value, otherwise
+zero.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> int <B>lisp_boolean</B> <I>(lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX28"></A>
+Returns the boolean value for <VAR>obj</VAR>. If <VAR>obj</VAR> represents false,
+the result is <CODE>0</CODE>, otherwise some integer not equal to
+<CODE>0</CODE>. This function must not be called when the type of <VAR>obj</VAR> is
+not <CODE>LISP_TYPE_BOOLEAN</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> int <B>lisp_cons_p</B> <I>(lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX29"></A>
+If <VAR>obj</VAR> is a cons, returns a non-zero value, otherwise zero.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_car</B> <I>(lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX30"></A>
+Returns the car of the cons stored in <VAR>obj</VAR>. This function must not
+be called when type type of <VAR>obj</VAR> is not <CODE>LISP_TYPE_CONS</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_cdr</B> <I>(lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX31"></A>
+Returns the cdr of the cons stored in <VAR>obj</VAR>. This function must not
+be called when type type of <VAR>obj</VAR> is not <CODE>LISP_TYPE_CONS</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_cxr</B> <I>(lisp_object_t* <VAR>obj</VAR>, const char* <VAR>x</VAR>)</I>
+<DD><A NAME="IDX32"></A>
+<VAR>x</VAR> must be a string consisting of the chars <CODE>a</CODE> and
+<VAR>d</VAR>. Returns the object resulting from applying <CODE>lisp_car</CODE> and
+<CODE>lisp_cdr</CODE> according to <VAR>x</VAR> with <CODE>a</CODE> corresponding to the
+former and <CODE>d</CODE> to the latter starting with <VAR>obj</VAR> in reverse
+order. As an example, <CODE>lisp_cxr(o,"ad")</CODE> is equivalent to
+<CODE>lisp_car(lisp_cdr(o))</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> int <B>lisp_list_length</B> <I>(lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX33"></A>
+Returns the length of the list stored in <VAR>obj</VAR>. A list is defined as
+the empty list, which is represented by a null pointer, or a cons, the
+cdr of which is a list.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_list_nth_cdr</B> <I>(lisp_object_t* <VAR>obj</VAR>, int <VAR>n</VAR>)</I>
+<DD><A NAME="IDX34"></A>
+Returns the result of iterating <CODE>lisp_cdr</CODE> <VAR>n</VAR> times on
+<VAR>obj</VAR>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_list_nth</B> <I>(lisp_object_t* <VAR>obj</VAR>, int <VAR>n</VAR>)</I>
+<DD><A NAME="IDX35"></A>
+Returns the car of the result of applying <CODE>lisp_list_nth_cdr</CODE> on
+<VAR>obj</VAR> with <VAR>n</VAR>.
+</DL>
+
+
+
+
+<H2><A NAME="SEC26" HREF="lispreader_toc.html#TOC26">Creating expressions</A></H2>
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_nil</B> <I>()</I>
+<DD><A NAME="IDX36"></A>
+Returns the empty list.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_make_integer</B> <I>(int <VAR>value</VAR>)</I>
+<DD><A NAME="IDX37"></A>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_make_integer_with_allocator</B> <I>(allocator_t* <VAR>allocator</VAR>, int <VAR>value</VAR>)</I>
+<DD><A NAME="IDX38"></A>
+Returns an integer object with the value <VAR>value</VAR>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_make_real</B> <I>(float <VAR>value</VAR>)</I>
+<DD><A NAME="IDX39"></A>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_make_real_with_allocator</B> <I>(allocator_t* <VAR>allocator</VAR>, float <VAR>value</VAR>)</I>
+<DD><A NAME="IDX40"></A>
+Returns a real object with the value <VAR>value</VAR>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_make_symbol</B> <I>(const char* <VAR>value</VAR>)</I>
+<DD><A NAME="IDX41"></A>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_make_symbol_with_allocator</B> <I>(allocator_t* <VAR>allocator</VAR>, const char* <VAR>value</VAR>)</I>
+<DD><A NAME="IDX42"></A>
+Returns a symbol object with the name <VAR>value</VAR>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_make_string</B> <I>(const char* <VAR>value</VAR>)</I>
+<DD><A NAME="IDX43"></A>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_make_string_with_allocator</B> <I>(allocator_t* <VAR>allocator</VAR>, const char* <VAR>value</VAR>)</I>
+<DD><A NAME="IDX44"></A>
+Returns a string object with the value <VAR>value</VAR>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_make_cons</B> <I>(lisp_object_t* <VAR>car</VAR>, lisp_object_t* <VAR>cdr</VAR>)</I>
+<DD><A NAME="IDX45"></A>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_make_cons_with_allocator</B> <I>(allocator_t* <VAR>allocator</VAR>, lisp_object_t* <VAR>car</VAR>, lisp_object_t* <VAR>cdr</VAR>)</I>
+<DD><A NAME="IDX46"></A>
+Returns a cons object with car <VAR>car</VAR> and cdr <VAR>cdr</VAR>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_make_boolean</B> <I>(int <VAR>value</VAR>)</I>
+<DD><A NAME="IDX47"></A>
+<DT><U>Function:</U> lisp_object_t* <B>lisp_make_boolean_with_allocator</B> <I>(allocator_t* <VAR>allocator</VAR>, int <VAR>value</VAR>)</I>
+<DD><A NAME="IDX48"></A>
+Returns a boolean. Its value is false if <VAR>value</VAR> is <CODE>0</CODE>, true otherwise.
+</DL>
+
+
+
+
+<H2><A NAME="SEC27" HREF="lispreader_toc.html#TOC27">Matching expressions against patterns</A></H2>
+
+<P>
+<DL>
+<DT><U>Function:</U> int <B>lisp_compile_pattern</B> <I>(lisp_object_t** <VAR>obj</VAR>, int* <VAR>num_subs</VAR>)</I>
+<DD><A NAME="IDX49"></A>
+Prepares the expression <CODE>*</CODE><VAR>obj</VAR> for use as a pattern in the
+<CODE>lisp_match_pattern</CODE> function. The expression is modified in the
+process. If <VAR>num_subs</VAR> is non-null, the number of pattern
+expressions (including all sub-expressions) will be written to
+<CODE>*</CODE><VAR>num_subs</VAR>.
+
+
+<P>
+Returns <CODE>0</CODE> if an error occurred, non-zero on success. Note that
+the expression could have been modified even if the function returned
+<CODE>0</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> int <B>lisp_match_pattern</B> <I>(lisp_object_t* <VAR>pattern</VAR>, lisp_object_t* <VAR>obj</VAR>, lisp_object_t** <VAR>vars</VAR>, int <VAR>num_subs</VAR>)</I>
+<DD><A NAME="IDX50"></A>
+Matches the pattern <VAR>pattern</VAR> (which must have previously been
+compiled using <CODE>lisp_compile_pattern</CODE>) against <VAR>obj</VAR>, storing
+the resulting subexpressions in <VAR>vars</VAR>, if it is
+non-null. <VAR>num_subs</VAR> should be the number of sub-patterns in
+<VAR>pattern</VAR>, if <VAR>vars</VAR> is non-null. Otherwise, it is ignored.
+
+
+<P>
+Patterns are counted by their special opening parenthesis (<SAMP>`#?('</SAMP>)
+from left to right, beginning with 0. For example, in the pattern
+expression <CODE>(a #?(or #?(integer) #?(string)) #?(symbol))</CODE>, the
+<CODE>or</CODE>-pattern has index 0, the <CODE>integer</CODE> index 1, the
+<CODE>string</CODE> index 2 and the <CODE>symbol</CODE> index 3. This means than
+upon matching this pattern against <CODE>(a 1 b)</CODE>, the integer <CODE>1</CODE>
+is stored in <VAR>vars</VAR><CODE>[0]</CODE> and <VAR>vars</VAR><CODE>[1]</CODE> and the
+symbol <CODE>b</CODE> is stored in <VAR>vars</VAR><CODE>[3]</CODE>. The values for
+unmatched parts, like <VAR>vars</VAR><CODE>[2]</CODE>, are set to an expression of
+type <CODE>LISP_TYPE_PARSE_ERROR</CODE>.
+
+
+<P>
+Returns <CODE>0</CODE> if the match was unsuccessful, non-zero on success.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> int <B>lisp_match_string</B> <I>(char* <VAR>pattern_string</VAR>, lisp_object_t* <VAR>obj</VAR>, lisp_object_t** <VAR>vars</VAR>)</I>
+<DD><A NAME="IDX51"></A>
+Reads an expression from <VAR>pattern_string</VAR>, compiles it using
+<CODE>lisp_compile_pattern</CODE> and matches <VAR>obj</VAR> against it using
+<CODE>lisp_match_pattern</CODE>, storing the resulting subexpressions in
+<VAR>vars</VAR>, if it is non-zero.
+
+
+<P>
+Returns non-zero if reading and matching were successful, <CODE>0</CODE>
+otherwise.
+</DL>
+
+
+
+
+<H2><A NAME="SEC28" HREF="lispreader_toc.html#TOC28">Freeing expressions</A></H2>
+
+<P>
+<DL>
+<DT><U>Function:</U> void <B>lisp_free</B> <I>(lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX52"></A>
+<DT><U>Function:</U> void <B>lisp_free_with_allocator</B> <I>(allocator_t* <VAR>allocator</VAR>, lisp_object_t* <VAR>obj</VAR>)</I>
+<DD><A NAME="IDX53"></A>
+Frees all memory occupied by <VAR>obj</VAR>, including all its
+subexpressions.
+</DL>
+
+
+
+
+<H1><A NAME="SEC29" HREF="lispreader_toc.html#TOC29">An Example</A></H1>
+
+<P>
+The following program reads expressions from standard input, prints the
+string <SAMP>`parse error'</SAMP> when a parse error occurs, exits on
+end-of-file and, if an entered expression is of the form
+<CODE>(+ </CODE><VAR>number1</VAR><CODE> </CODE><VAR>number2</VAR><CODE>)</CODE>, prints the sum of
+<VAR>number1</VAR> and <VAR>number2</VAR>.
+
+
+
+<PRE>
+#include &#60;lispreader.h&#62;
+
+int
+main (void)
+{
+    lisp_object_t *obj;
+    lisp_stream_t stream;
+
+    lisp_stream_init_file(&#38;stream, stdin);
+
+    while (1)
+    {
+        int type;
+
+        obj = lisp_read(&#38;stream);
+        type = lisp_type(obj);
+        if (type != LISP_TYPE_EOF &#38;&#38; type != LISP_TYPE_PARSE_ERROR)
+        {
+            lisp_object_t *vars[2];
+
+            if (lisp_match_string("(+ #?(number) #?(number))",
+                                  obj, vars))
+                printf("%f\n", lisp_real(vars[0])
+                               + lisp_real(vars[1]));
+
+        }
+        else if (type == LISP_TYPE_PARSE_ERROR)
+            printf("parse error\n");
+        lisp_free(obj);
+
+        if (type == LISP_TYPE_EOF)
+            break;
+    }
+
+    return 0;
+}
+</PRE>
+
+
+
+<H1><A NAME="SEC30" HREF="lispreader_toc.html#TOC30">Function Index</A></H1>
+
+<P>
+Jump to:
+<A HREF="#findex_f">f</A>
+-
+<A HREF="#findex_i">i</A>
+-
+<A HREF="#findex_l">l</A>
+-
+<A HREF="#findex_p">p</A>
+-
+<A HREF="#findex_r">r</A>
+<P>
+<H2><A NAME="findex_f">f</A></H2>
+<DIR>
+<LI><A HREF="lispreader.html#IDX3">free_pools</A>
+</DIR>
+<H2><A NAME="findex_i">i</A></H2>
+<DIR>
+<LI><A HREF="lispreader.html#IDX1">init_pools</A>
+<LI><A HREF="lispreader.html#IDX6">init_pools_allocator</A>
+</DIR>
+<H2><A NAME="findex_l">l</A></H2>
+<DIR>
+<LI><A HREF="lispreader.html#IDX28">lisp_boolean</A>
+<LI><A HREF="lispreader.html#IDX27">lisp_boolean_p</A>
+<LI><A HREF="lispreader.html#IDX30">lisp_car</A>
+<LI><A HREF="lispreader.html#IDX31">lisp_cdr</A>
+<LI><A HREF="lispreader.html#IDX49">lisp_compile_pattern</A>
+<LI><A HREF="lispreader.html#IDX29">lisp_cons_p</A>
+<LI><A HREF="lispreader.html#IDX32">lisp_cxr</A>
+<LI><A HREF="lispreader.html#IDX16">lisp_dump</A>
+<LI><A HREF="lispreader.html#IDX52">lisp_free</A>
+<LI><A HREF="lispreader.html#IDX53">lisp_free_with_allocator</A>
+<LI><A HREF="lispreader.html#IDX20">lisp_integer</A>
+<LI><A HREF="lispreader.html#IDX19">lisp_integer_p</A>
+<LI><A HREF="lispreader.html#IDX33">lisp_list_length</A>
+<LI><A HREF="lispreader.html#IDX35">lisp_list_nth</A>
+<LI><A HREF="lispreader.html#IDX34">lisp_list_nth_cdr</A>
+<LI><A HREF="lispreader.html#IDX47">lisp_make_boolean</A>
+<LI><A HREF="lispreader.html#IDX48">lisp_make_boolean_with_allocator</A>
+<LI><A HREF="lispreader.html#IDX45">lisp_make_cons</A>
+<LI><A HREF="lispreader.html#IDX46">lisp_make_cons_with_allocator</A>
+<LI><A HREF="lispreader.html#IDX37">lisp_make_integer</A>
+<LI><A HREF="lispreader.html#IDX38">lisp_make_integer_with_allocator</A>
+<LI><A HREF="lispreader.html#IDX39">lisp_make_real</A>
+<LI><A HREF="lispreader.html#IDX40">lisp_make_real_with_allocator</A>
+<LI><A HREF="lispreader.html#IDX43">lisp_make_string</A>
+<LI><A HREF="lispreader.html#IDX44">lisp_make_string_with_allocator</A>
+<LI><A HREF="lispreader.html#IDX41">lisp_make_symbol</A>
+<LI><A HREF="lispreader.html#IDX42">lisp_make_symbol_with_allocator</A>
+<LI><A HREF="lispreader.html#IDX50">lisp_match_pattern</A>
+<LI><A HREF="lispreader.html#IDX51">lisp_match_string</A>
+<LI><A HREF="lispreader.html#IDX36">lisp_nil</A>
+<LI><A HREF="lispreader.html#IDX18">lisp_nil_p</A>
+<LI><A HREF="lispreader.html#IDX12">lisp_read</A>
+<LI><A HREF="lispreader.html#IDX14">lisp_read_from_string</A>
+<LI><A HREF="lispreader.html#IDX15">lisp_read_from_string_with_allocator</A>
+<LI><A HREF="lispreader.html#IDX13">lisp_read_with_allocator</A>
+<LI><A HREF="lispreader.html#IDX22">lisp_real</A>
+<LI><A HREF="lispreader.html#IDX21">lisp_real_p</A>
+<LI><A HREF="lispreader.html#IDX8">lisp_stream_free_path</A>
+<LI><A HREF="lispreader.html#IDX11">lisp_stream_init_any</A>
+<LI><A HREF="lispreader.html#IDX9">lisp_stream_init_file</A>
+<LI><A HREF="lispreader.html#IDX7">lisp_stream_init_path</A>
+<LI><A HREF="lispreader.html#IDX10">lisp_stream_init_string</A>
+<LI><A HREF="lispreader.html#IDX26">lisp_string</A>
+<LI><A HREF="lispreader.html#IDX25">lisp_string_p</A>
+<LI><A HREF="lispreader.html#IDX24">lisp_symbol</A>
+<LI><A HREF="lispreader.html#IDX23">lisp_symbol_p</A>
+<LI><A HREF="lispreader.html#IDX17">lisp_type</A>
+</DIR>
+<H2><A NAME="findex_p">p</A></H2>
+<DIR>
+<LI><A HREF="lispreader.html#IDX4">pools_alloc</A>
+</DIR>
+<H2><A NAME="findex_r">r</A></H2>
+<DIR>
+<LI><A HREF="lispreader.html#IDX2">reset_pools</A>
+</DIR>
+
+
+<P><HR><P>
+This document was generated on 2 April 2005 using
+<A HREF="http://wwwinfo.cern.ch/dis/texi2html/">texi2html</A>&nbsp;1.56k.
+</BODY>
+</HTML>
